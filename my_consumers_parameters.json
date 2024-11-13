@@ -1,0 +1,41 @@
+{
+    "vault":{
+        "vault_url":"https://vault-dev.cloud.infn.it:8200",
+        "role_id": "85560e29-1354-2828-9071-2e5b7f20814a",
+        "secret_id": "4d4781a5-0766-553d-6674-b45a313854b8" 
+        },
+    "rabbitmq":{
+        "host": "192.135.24.151",
+        "hostname":"rabbitmq",
+        "port": 5671,
+        "new_repo_queue": "publisher",
+        "notification_queue" : "bucketupdate",
+        "username": "notification",
+        "rabbitconfiguration_user": "publisher",
+        "admin_user": "rabbitmq",
+        "mng_user": "get_queue",
+        "password": "Topic01",
+        "rabbitconfiguration_password": "notpwd2601",
+        "admin_password": "r@BBitt2024",
+        "mng_password": "G3tqueue",
+        "url": "https://192.135.24.151:15671/",
+        "exchange": "notification"
+        },
+    "ceph-rgw":{
+        "access_key": "L9TICJ0KDNA9GN55WNXY",
+        "secret_key": "AOGF0MKTVyxVmAB5BABzzXCsO3oTtXpnTMSDBKFC",
+        "url": "https://rgw.cloud.infn.it/",
+        "region": "default",
+        "role": "cvmfsAccess"
+        },
+    "cvmfs":{
+        "stratum0_url": "https://rgw.cloud.infn.it:443/cvmfs/",
+        "upstream_storage": "http://cvmfs.wp6.cloud.infn.it:4929/api/v1"
+        },
+    "ssl":{
+        "ca_cert":"certs/ca_certificate.pem",
+        "client_cert":"certs/client_rabbitmq_cert.pem",
+        "client_key":"certs/client_rabbitmq_key.pem"
+      }
+}
+

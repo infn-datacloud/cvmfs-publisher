@@ -1,5 +1,5 @@
 # Author: Francesca Del Corso
-# Last update: 05 Nov. 2024 - versione SOLO download e cancellazione
+# Last update: 13 Nov. 2024 - versione SOLO download e cancellazione
 
 import pika
 import asyncio

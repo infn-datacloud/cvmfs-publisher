@@ -14,16 +14,16 @@
         "rabbitconfiguration_user": "publisher",
         "admin_user": "rabbitmq",
         "mng_user": "get_queue",
-        "password": "Topic01",
-        "rabbitconfiguration_password": "notpwd2601",
-        "admin_password": "r@BBitt2024",
-        "mng_password": "G3tqueue",
+        "password": "XXXX",
+        "rabbitconfiguration_password": "XXXXX",
+        "admin_password": "XXXXX",
+        "mng_password": "XXXXX",
         "url": "https://192.135.24.151:15671/",
         "exchange": "notification"
         },
     "ceph-rgw":{
-        "access_key": "L9TICJ0KDNA9GN55WNXY",
-        "secret_key": "AOGF0MKTVyxVmAB5BABzzXCsO3oTtXpnTMSDBKFC",
+        "access_key": "XXXXXX",
+        "secret_key": "XXXXXXX",
         "url": "https://rgw.cloud.infn.it/",
         "region": "default",
         "role": "cvmfsAccess"

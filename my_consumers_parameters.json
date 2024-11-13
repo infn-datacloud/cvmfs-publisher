@@ -1,8 +1,8 @@
 {
     "vault":{
         "vault_url":"https://vault-dev.cloud.infn.it:8200",
-        "role_id": "85560e29-1354-2828-9071-2e5b7f20814a",
-        "secret_id": "4d4781a5-0766-553d-6674-b45a313854b8" 
+        "role_id": "XXXXXX",
+        "secret_id": "XXXXXX" 
         },
     "rabbitmq":{
         "host": "192.135.24.151",

@@ -1,18 +1,4 @@
 # Prove_di_Carico_S3_bucket.py
-# https://baltig.infn.it/infn-cloud/s3-oidc-sts/-/blob/main/docs/rgw/README.md#boto3-retrieve-s3-temporary-credentials-and-start-s3-session-using-sts-with-radosgw-api
-
-# N.B.: Si accede ad S3 attraverso il TOKEN IAM ottenuto con oidc-agent lo user delcorso e lo IAM https://iam.cloud.infn.it/
-
-# ATTENZIONE!! PRIMA DI ESEGUIRE QUESTO SCRIPT ACCERTARSI CHE OIDC-AGENT PID E SOCK SIANO CARICATI!!
-# 1. eseguire C:\Program Files\oidc-agent\oidc-agent\oidc-agent:
-# cd "C:\Program Files\oidc-agent\oidc-agent\"
-# .\oidc-agent.exe
-# set OIDC_SOCK=valore restituito da oidc-agent 
-
-# set OIDCD_PID=valore restituito da oidc-agent 
-# oidc-gen -l                           (per visualizzare i valori presenti)
-# oidc-add delcorso                     (La password di oidc-agent per lo user delcorso è 1234567890 )
-# oidc-token.exe --aud=object delcorso  (test token)
 
 import boto3
 import os 
@@ -22,13 +8,12 @@ import subprocess
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
 
-#bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10','repo11','repo12','repo13','repo14','repo15','repo16','repo17','repo18','repo19','repo20']  #bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10']
-bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10','repo11','repo12','repo13','repo14','repo15']
-path = "D:\\OneDrive - Istituto Nazionale di Fisica Nucleare\\INFN-PG\\LAVORI\\TERABIT\\WP6\\file py\\Prove_di_carico\\sw\\high\\2GB\\"
-output_file = "D:\\OneDrive - Istituto Nazionale di Fisica Nucleare\\INFN-PG\\LAVORI\\TERABIT\\WP6\\file py\\Prove_di_carico\\Prove_di_Carico.txt"
 
-# Token ottenuto manualmente via oidc-agent (su Windows  o Linux) usando lo IAM  https://iam.cloud.infn.it/ , user delcorso, pwd 1234567890, scope id: max                                                            
-# TOKEN_IAM = "eyJraWQiOiJjcmExIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiIzNDE1ODM1MC1jNzQ2LTQ5MTgtODJhYi05MDA0ZGQwM2Y5NWIiLCJpc3MiOiJodHRwczpcL1wvaWFtLmNsb3VkLmluZm4uaXRcLyIsImdyb3VwcyI6WyJ1c2VycyIsImVuZC11c2Vycy1jYXRjaGFsbCIsInVzZXJzXC9zMyIsInVzZXJzXC9uYWFzIiwidXNlcnNcL2NhdGNoYWxsIiwiYWRtaW5zIiwiYWRtaW5zXC9jYXRjaGFsbCJdLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkZWxjb3JzbyIsIm9yZ2FuaXNhdGlvbl9uYW1lIjoiaW5mbi1jbG91ZCIsImNsaWVudF9pZCI6IjJlMmZmOTIxLTNjOWEtNGNlMi1iZTFlLTBhMTg2MzQ4YjRiYiIsImF1ZCI6Im9iamVjdCIsIm5hbWUiOiJGcmFuY2VzY2EgRGVsIENvcnNvIiwiZXhwIjoxNzIwMTc4NzU3LCJpYXQiOjE3MjAxNzUxNTcsImp0aSI6ImJlMWQzYjNkLWYyNDYtNDk1ZS05OWVhLTNiMGY1ODhkNTM3OCIsImVtYWlsIjoiZnJhbmNlc2NhLmRlbGNvcnNvQGJvLmluZm4uaXQifQ.lmuP96bmDHv1Q5iA4njlUymAZaqFZJgGDmD-RV0TNQ4-8UEzlowlDjT9akgKPN0H7UCQiCKwCKqYL4fMIe7CHblFDLsM8YcNdJ4lwIvkEQw3cF0ZKrpZObt6NL1Kf1f8ojB8j_r4VcTHd2qmlDFhU7a9Vw6Hm25tHNOl-Oy9cb358nTgyZga40TIC7xHOVxSeYhl6C7on2rxdR_9sqpf7v2sQ1Lj8jZ8e0fZzI4RWECgOp8fB0zx-JVC-0DUFoGuUwn_PebhLLh7l180agIo_YsH7vQZIw_71spLC8lFkP7QQ2NpuwlIEOGOKtav9pnmPTFhHzFR3n1zK1gg9Mbasw"
+bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10','repo11','repo12','repo13','repo14','repo15', 'repo16','repo17','repo18','repo19','repo20']
+path = "Prove_di_carico\\sw\\"
+output_file = "Prove_di_carico\\Prove_di_Carico.txt"
+
+
 
 def get_oidc_token():
     command = r'C:\Program Files\oidc-agent\oidc-agent\oidc-token.exe --aud=object delcorso'
@@ -45,7 +30,6 @@ def get_S3_client(TOKEN_IAM):
         else:
                 print("Failed to update token.")
 
-        # Perform assume_role_with_web_identity
         response = sts_client.assume_role_with_web_identity(
                 RoleArn="arn:aws:iam:::role/IAMaccess",
                 RoleSessionName='Bob',
@@ -53,7 +37,6 @@ def get_S3_client(TOKEN_IAM):
                 WebIdentityToken = TOKEN_IAM
                 )
 
-        # After AuthN and AuthZ success, use temporary credentials stored in response variable to proceed with s3 operations
         s3client = boto3.client('s3',
                 aws_access_key_id = response['Credentials']['AccessKeyId'],
                 aws_secret_access_key = response['Credentials']['SecretAccessKey'],
@@ -99,7 +82,7 @@ try:
         with open(output_file, 'a') as f1:
                 f1.write("TIME\tBucket\tFilename\tUploadTime\n")   
 
-                # GET THE TOKEN AND ACCESS S3
+                # GET THE TOKEN AND S3 ACCESS
                 TOKEN_IAM = get_oidc_token()
                 s3client = get_S3_client(TOKEN_IAM)    
                 

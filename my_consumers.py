@@ -155,31 +155,6 @@ def cvmfs_publish(queue):
         print(f"Error in cvmfs-server publish operation: {e}")
         return False
 
-#   try:
-#        # Execute the cvmfs_server publish command
-#        result = subprocess.run(
-#            ['cvmfs_server', 'publish', repo_name],
-#            check=True,
-#            capture_output=True,
-#            text=True
-#        )
-
-#        print("Command executed successfully:")
-#        print(result.stdout)
-#
-#    except subprocess.CalledProcessError as e:
-#        print(f"Command failed with exit code {e.returncode}: {e.stderr.strip()}")
-#        cvmfs_abort(queue)
-#    except PermissionError:
-#        print(f"Permission denied when trying to execute cvmfs_server.")
-#        cvmfs_abort(queue)
-#    except FileNotFoundError:
-#        print("The cvmfs_server command was not found. Please ensure it is installed.")
-#    except OSError as e:
-#        print(f"OS error occurred: {e}")
-#    except Exception as e:
-#        print(f"An unexpected error occurred: {e}")
-
 
 def cvmfs_abort(queue):
     try:

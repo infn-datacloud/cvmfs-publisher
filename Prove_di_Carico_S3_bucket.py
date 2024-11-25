@@ -12,7 +12,6 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Cli
 
 
 bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10','repo11','repo12','repo13','repo14','repo15','repo16','repo17','repo18','repo19','repo20']  #bucket_list=['repo01','repo02','repo03','repo04','repo05','repo06','repo07','repo08','repo09','repo10']
-
 path = "Prove_di_carico\\sw\\small\\100\\"
 output_file = "Prove_di_carico\\Prove_di_Carico.txt"
 
@@ -112,7 +111,6 @@ while True:
                                                  f1.write(str(start_upload) + "\t" + bucket +"\t" + FILE + "\t" + str(upload_time)+ "\n")   
                         print(f'{n_file_uploaded} files successfully uploaded for bucket {bucket} in {end_upload-START_BUCKET_TIME}.')
                               
-
                         # FILES REMOVE
                         # start_rm = datetime.now()
                         # bucket_objects = list_bucket_content(bucket)
@@ -121,7 +119,6 @@ while True:
                         # end = datetime.now()
                         # n_file_removed = len(bucket_objects_to_remove)
                         # print(f'{n_file_removed} files successfully deleted for bucket {bucket} in {end-start_rm}. Time: {start_rm}')
-
 
                         # TOKEN renew
                         END_TIME = datetime.now()

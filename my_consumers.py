@@ -216,7 +216,7 @@ def callback(ch, method, properties, body):
 
 
 
-# Function to manage a queue with a single thread
+# to manage a queue with a single thread
 class QueueWorker(threading.Thread):
     def __init__(self, queue_name):
         super().__init__()

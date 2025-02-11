@@ -35,9 +35,9 @@ def delete_temp_files(directory):
 
 
 # This function syncronizes the publisher folders with the cvmfs repositories.
-def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
-
-    for cvmfs_repo in os.listdir(my_cvmfs_path):     # cvmfs_repo=repo01.infn.it    
+def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         
+    # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs , cvmfs_repo=repo01.infn.it 
+    for cvmfs_repo in os.listdir(my_cvmfs_path): 
         
         folder_path  = os.path.join(my_cvmfs_path, cvmfs_repo)
         cvmfs_folder = os.path.join(cvmfs_path, cvmfs_repo)
@@ -121,9 +121,9 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
 
             # case .tar files to EXTRACT
             to_extract_path = my_cvmfs_path + "/" + cvmfs_repo + "/to_extract/"
-            if os.path.isdir(to_extract_path) and os.listdir(to_extract_path):   # check esistenza cartella e dir non vuota
+            if os.path.isdir(to_extract_path) and os.listdir(to_extract_path):   
                    tar_files = [f for f in os.listdir(to_extract_path) if os.path.isfile(os.path.join(to_extract_path, f))]
-                   cvmfs_extract(cvmfs_repo,tar_files)  # cvmfs_repo=repo01.infn.it
+                   cvmfs_extract(cvmfs_repo,tar_files)  
 
 
 def delete_cvmfs_files(to_delete_file,cvmfs_repo):
@@ -146,10 +146,10 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
             # Delete files
             for file in files:
              file_path = file.strip()        # file_path=/cvmfs/repo01.infn.it/oidc-agent_5.1.0.tar
-             if file_path.endswith('.tar'):  # CASE deleting .tar file
+             if file_path.endswith('.tar'):  # CASE .tar file delete
                 try:
                    # The entire folder is to be deleted
-                   folder_name = os.path.splitext(os.path.basename(file_path))[0]  # file_path_dir = /cvmfs/repodir/foldername
+                   folder_name = os.path.splitext(os.path.basename(file_path))[0]  
                    file_path_dir = "/cvmfs/" + cvmfs_repo + "/software/" + folder_name
                    shutil.rmtree(file_path_dir)
                    print(f"{file_path_dir} deleted successfully.")

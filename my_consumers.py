@@ -264,15 +264,13 @@ class ThreadMonitor:
             time.sleep(10)  # wait before trying again
 
 
-# Configure logging
+# Generate log function
 def log_generation():
-    # Generate log file with current date
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_filename = f"log/my_consumers_{date_stamp}.log"
-    
     logging.basicConfig(
-     level=logging.INFO,                   # Set the logging level: INFO, ERROR, DEBUG
-     filename=log_filename,                 # Specify the log file name
+     level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
+     filename=log_filename,                 # Specify log file name
      filemode='a',                          # Append to the file if it exists
      format='%(asctime)s - %(levelname)s - %(message)s'
     )
@@ -299,32 +297,11 @@ def list_queues():
        print(f"Error while connecting to RabbitMQ API: {e}")
        return []
 
-# To check the RabbitMQ queues and activatong a new thread for new queues
-def monitor_threads():
-    """
-    Controlla lo stato dei thread e li riavvia se necessario.
-    """
-    while True:
-        logging.info("Verifica delle code attive...")
-        current_queues = list_queues()
-
-        for queue in current_queues:
-            if queue not in running_threads or not running_threads[queue].is_alive():
-                logger.info(f"Avvio del thread per la coda: {queue}")
-                thread = threading.Thread(target=worker, args=(queue,), daemon=True)
-                running_threads[queue] = thread
-                thread.start()
-
-        time.sleep(CHECK_INTERVAL)
 
 def main():
     
-    log_generation()        # questo check va fatto ruotare? 
-    #monitor_threads()
-    QUEUES=list_queues()    # questo check andra' fatto periodicamente, ad sempio ogni 30 minuti
-    
-    #QUEUES=['repo01']
-    
+    log_generation()        
+    QUEUES=list_queues()    # to be done periodically, e.g. every 30 minutes
     monitor = ThreadMonitor(QUEUES)
     monitor.start_threads()
     monitor.monitor_threads()

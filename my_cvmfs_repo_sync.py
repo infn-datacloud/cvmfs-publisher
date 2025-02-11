@@ -53,7 +53,7 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                 
                 try:
                     # Start a CVMFS transaction if the repo is not yet in a transaction.
-                    # sudo cvmfs_server list | grep repo deve contenere la stringa "in transaction"
+                    # 'sudo cvmfs_server list | grep repo' must contain the string "in transaction"
                     resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
                     resp1 = subprocess.run(["grep", my_cvmfs_repo], input=resp.stdout, capture_output=True)
                     if not "transaction" in resp1.stdout.decode('utf-8'):

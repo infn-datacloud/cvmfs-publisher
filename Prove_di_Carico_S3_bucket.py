@@ -84,8 +84,6 @@ def list_bucket_content(bucket):
 
 
 try:
-        # For Debugging Purposes 
-        #boto3.set_stream_logger(name='botocore')
 
         with open(output_file, 'a') as f1:
                 f1.write("TIME\tBucket\tFilename\tUploadTime\n")   

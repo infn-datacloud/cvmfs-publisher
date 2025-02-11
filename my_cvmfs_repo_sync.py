@@ -131,7 +131,7 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
          with open(to_delete_file, "r") as f:
               files = f.readlines()    
          
-         remaining_lines = []       
+         remaining_files = []       
          # Open a CVMFS transaction
          try:
             # Start a CVMFS transaction if the repo is not yet in a transaction.
@@ -157,23 +157,23 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                 except Exception as e:
                    print(f"Failed to delete {file_path}: {e}")
                    logging.info(f"Failed to delete {file_path}: {e}")
-                   remaining_lines.append(line)  # Keep the line if deletion fails
+                   remaining_files.append(file)  # Keep the file if deletion fails
 
-             else:  # case deleting other types of files
+             else:
                try:
                  if os.path.exists(file_path):
                    os.remove(file_path)
                    print(f"Deleted: {file_path}")
                    logging.info(f"Deleted: {file_path}")
                  else:
-                   # Il caso file non trovato nel delete non è errore, viene solo segnalato nei log
+                   # case file not found is not an error, it is only reported in the log file.
                    print(f"File not found, skipping: {file_path}")
                    logging.info(f"File not found, skipping: {file_path}")
 
                except Exception as e:
                 print(f"Failed to delete {file_path}: {e}")
                 logging.info(f"Failed to delete {file_path}: {e}")
-                remaining_lines.append(line)  # Keep the line if deletion fails
+                remaining_files.append(file)  # Keep the file if deletion fails
         
 
             # Execute CVMFS publish

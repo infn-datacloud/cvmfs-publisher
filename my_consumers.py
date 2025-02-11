@@ -77,7 +77,7 @@ def S3_client_setup():
 
 
 def process_messages(message, queue):
-    msg=json.loads(message.decode("utf-8")) # La stringa message per essere trattata come dizionario va passata alla funzione json.loads
+    msg=json.loads(message.decode("utf-8")) 
     try:
         Bucket = msg['Records'][0]['s3']['bucket']['name']   # Bucket=repo01
         Key = msg['Records'][0]['s3']['object']['key']       # key=cvmfs/netCDF-92
@@ -85,10 +85,9 @@ def process_messages(message, queue):
         Operation = msg['Records'][0]['eventName']           # Operation=ObjectCreated:Put ==> download
         print(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
         logging.info(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
-        
-        #Filename="/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file    
+           
         Filename="/data/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
-        Filename_path = os.path.dirname(Filename)   # /home/ubuntu/my_consumers/repo17.infn.it
+        Filename_path = os.path.dirname(Filename)            
 
         # Create the directory for the file path (ignoring the file itself if present), even with delete operation
         if not os.path.exists(Filename_path):
@@ -118,7 +117,7 @@ def process_messages(message, queue):
         else:
              # DELETE operation
              if ("ObjectRemoved" in Operation):
-                # The file to be removed (file_to_be_removed) from CVMFS repo is written in a .txt file (to_delete_file) located under the to_delete folder
+                # The file to be removed from CVMFS repo is written in a .txt file in to_delete/ folder
                 file_to_be_removed= "/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
                 to_delete_file = Filename_path + "/to_delete/" + Bucket + "-infn-it.txt"
                 with open(to_delete_file, "a") as f:
@@ -175,11 +174,10 @@ def download_from_s3(bucket, key, Filename):
         return False
 
     except ClientError as e:
-        # You can further refine the exception handling based on the error code
         if e.response['Error']['Code'] == '404':
             print(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
             logging.info(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
-            # Non posso fare il download di un file che su s3 non esiste, e poiché la repo cvmfs deve essere sincronizzata con s3, questo caso non viene considerato errore      
+            # Downloading a non existing S3 file is not considered an error      
             return True
         else:
             print(f'Client error: {e}')
@@ -218,7 +216,7 @@ def callback(ch, method, properties, body):
 
 
 
-# Funzione per gestire una coda con un solo thread
+# Function to manage a queue with a single thread
 class QueueWorker(threading.Thread):
     def __init__(self, queue_name):
         super().__init__()
@@ -237,12 +235,12 @@ class QueueWorker(threading.Thread):
                 channel.start_consuming()
             except Exception as e:
                 print(f"[!] Error in {self.queue_name}: {e}. Restarting...")
-                time.sleep(5)  # Attendi prima di riprovare
+                time.sleep(5)  # wait before trying again
 
     def stop(self):
         self.running = False
 
-# Gestore per controllare i thread e riavviarli se necessario
+# To monitor threads and restart them if necessary
 class ThreadMonitor:
     def __init__(self, queues):
         self.queues = queues
@@ -261,17 +259,17 @@ class ThreadMonitor:
 
     def monitor_threads(self):
         while True:
-            for queue in self.queues:
+            for queue in self.queue
                 self.start_thread(queue)
-            time.sleep(10)  # Controlla periodicamente lo stato dei thread
+            time.sleep(10)  # wait before trying again
 
 
-
+# Configure logging
 def log_generation():
     # Generate log file with current date
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_filename = f"log/my_consumers_{date_stamp}.log"
-    # Configure logging: https://docs.python.org/3/howto/logging.html
+    
     logging.basicConfig(
      level=logging.INFO,                   # Set the logging level: INFO, ERROR, DEBUG
      filename=log_filename,                 # Specify the log file name

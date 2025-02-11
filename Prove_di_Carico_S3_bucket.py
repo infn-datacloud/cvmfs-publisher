@@ -78,7 +78,7 @@ def list_bucket_content(bucket):
         bucket_objects =[]
         resp = s3_client.list_objects(Bucket=bucket)
         for content in resp.get('Contents', []):
-                bucket_objects.append(content['Key'])     # elenco oggetti presenti nel repo bucket
+                bucket_objects.append(content['Key'])     
         return(bucket_objects)
 
 

@@ -1,7 +1,7 @@
 # my_cvmfs_repo_sync.py
 # Author: Francesca Del Corso
 # Last update: Feb 11 2025
-# Syncronization between /data/cvmfs folders on the cvmfs_publish host and the corresponding CVMFS repositories
+# Syncronization between /data/cvmfs folders on the cvmfs_publish host and the corresponding CVMFS repositories.
 
 import os,sys
 import re
@@ -34,8 +34,8 @@ def delete_temp_files(directory):
                 print(f"Error deleting {filename}: {e}")
 
 
-
-def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/home/ubuntu/my_consumers/cvmfs , cvmfs_path=/cvmfs
+# This function syncronizes the publisher folders with the cvmfs repositories.
+def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
 
     for my_cvmfs_repo in os.listdir(my_cvmfs_path):     # my_cvmfs_repo=repo01.infn.it    
         
@@ -222,13 +222,12 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                 logging.info(f"Extracting {tar_file} in {cvmfs_repo} started.")
     
                 try:
-                    # sudo cvmfs_server list | grep repo deve contenere la stringa "in transaction"
+                    # 'sudo cvmfs_server list | grep repo' must contain the string "in transaction"
                     resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
                     resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
                     # If the repo is in a transaction, close the transaction with publish before doing the ingest operation. 
                     if "transaction" in resp1.stdout.decode('utf-8'):
                        res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True, text=True, check=True)
-
                        logging.info(f"{res.stdout}")
                        if res.stderr:
                           logging.error(f"{res.stderr}")
@@ -236,11 +235,9 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                     # CVMFS ingest
                     my_tar_file= my_cvmfs_repo_extract_path + tar_file
                     # my_tar_file= cvmfs/repo21.infn.it/to_extract/oidc-agent.5.1.0.tar
-                    # questo script DEVE essere eseguito nella cartella /home/ubuntu/my_connections
                     subprocess.run(["cvmfs_server", "ingest", "-t", my_tar_file, "-b", "software/" , cvmfs_repo], capture_output=True, text=True, check=True)
                     # Delete .tar files
                     os.remove(os.path.join(my_cvmfs_repo_extract_path, tar_file))
-                    
                     extract_finish_time=datetime.now()
                     print(f"CVMFS server ingest process for {tar_file} in {cvmfs_repo} successfully completed at {extract_finish_time}.")
                     logging.info(f"CVMFS server ingest process for {tar_file} in {cvmfs_repo} successfully completed.")

@@ -39,8 +39,6 @@ SSL_CL_KEY  = WDIR_PATH + client_key
 
 prefetch_count=10
 RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','datacloud','delcorso', 'fanzago','gmalatesta','sgaravat', 'spiga','trace', 'repo31', 'repo32']
-# 'repo01', 'repo02', 'repo03', 'repo04', 'repo05', 'repo06', 'repo07', 'repo08','repo09', 'repo10', "repo11", "repo12", "repo13", 'repo14', 'repo15', 'repo16', 'repo17', 'repo18','repo19', 'repo20', 'repo21', 'repo22', 'repo23', 'repo24', 'repo25', 'repo26', 'repo27', 'repo28','repo29', 'repo30','repo31', 'repo32'
-
 
 # SSL context for secure connection
 def create_ssl_context():

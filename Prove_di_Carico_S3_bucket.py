@@ -32,12 +32,11 @@ def get_oidc_token():
 def get_s3_client(TOKEN_IAM):
         if TOKEN_IAM:
                 print(f"Token IAM updated: {TOKEN_IAM}")
-                # sts=Secure Token Service initialization
+                
                 sts_client = boto3.client('sts',
                                 endpoint_url="https://rgw.cloud.infn.it:443",
                                 region_name='default'
                                 )
-                # Perform assume_role_with_web_identity
                 response = sts_client.assume_role_with_web_identity(
                                 RoleArn="arn:aws:iam:::role/IAMaccess",
                                 RoleSessionName='Bob',
@@ -45,7 +44,6 @@ def get_s3_client(TOKEN_IAM):
                                 WebIdentityToken = TOKEN_IAM
                                 )
 
-                # After AuthN and AuthZ success, use temporary credentials stored in response variable to proceed with s3 operations
                 s3_client = boto3.client('s3',
                                 aws_access_key_id = response['Credentials']['AccessKeyId'],
                                 aws_secret_access_key = response['Credentials']['SecretAccessKey'],

@@ -1,18 +1,19 @@
+# my_consumers.py
 # Author: Francesca Del Corso
-# Last update: 13 Nov. 2024 - versione SOLO download e cancellazione
+# Last update: 11 Feb 2025
 
 import pika
-import asyncio
+import threading
+import time
 import ssl
 import json
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError, BotoCoreError
-import os,sys
-import subprocess
-from datetime import datetime
-import requests
 import logging
 import logging.handlers
+import os, sys
+from datetime import datetime
+import requests
 
 with open("my_consumers_parameters.json") as json_data_file:
     data = json.load(json_data_file)
@@ -36,8 +37,10 @@ SSL_CA_CERT = WDIR_PATH + ca_cert
 SSL_CL_CERT = WDIR_PATH + client_cert
 SSL_CL_KEY  = WDIR_PATH + client_key
 
-ack_threshold = 10
-RABBITMQ_EXCLUDED_QUEUES=['bucketupdate','cvmfs_reply','cvmfs','publisher','datacloud']
+prefetch_count=10
+RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','datacloud','delcorso', 'fanzago','gmalatesta','sgaravat', 'spiga','trace', 'repo31', 'repo32']
+# 'repo01', 'repo02', 'repo03', 'repo04', 'repo05', 'repo06', 'repo07', 'repo08','repo09', 'repo10', "repo11", "repo12", "repo13", 'repo14', 'repo15', 'repo16', 'repo17', 'repo18','repo19', 'repo20', 'repo21', 'repo22', 'repo23', 'repo24', 'repo25', 'repo26', 'repo27', 'repo28','repo29', 'repo30','repo31', 'repo32'
+
 
 # SSL context for secure connection
 def create_ssl_context():
@@ -74,202 +77,215 @@ def S3_client_setup():
 
     return s3_client
 
-# Filename = path + nome del file che verrà dato alla key scaricata
-async def download_from_s3(bucket, key, Filename):
-    s3=S3_client_setup()
+
+def process_messages(message, queue):
+    msg=json.loads(message.decode("utf-8")) # La stringa message per essere trattata come dizionario va passata alla funzione json.loads
     try:
-        start_download = datetime.now()
+        Bucket = msg['Records'][0]['s3']['bucket']['name']   # Bucket=repo01
+        Key = msg['Records'][0]['s3']['object']['key']       # key=cvmfs/netCDF-92
+        dir_file, file = os.path.split(Key)                  # dir_file=cvmfs, file=netCDF-92
+        Operation = msg['Records'][0]['eventName']           # Operation=ObjectCreated:Put ==> download
+        print(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
+        logging.info(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
+        
+        #Filename="/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file    
+        Filename="/data/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
+        Filename_path = os.path.dirname(Filename)   # /home/ubuntu/my_consumers/repo17.infn.it
+
+        # Create the directory for the file path (ignoring the file itself if present), even with delete operation
+        if not os.path.exists(Filename_path):
+                os.makedirs(Filename_path)
+                print(f"Directory {Filename_path} created successfully.")
+                logging.info(f"Directory {Filename_path} created successfully.")
+                dir_to_delete = os.path.join(Filename_path, 'to_delete')
+                dir_to_extract= os.path.join(Filename_path, 'to_extract')
+                if not os.path.exists(dir_to_delete):
+                    os.makedirs(dir_to_delete)
+                    print(f"Directory {dir_to_delete} created successfully.")
+                    logging.info(f"Directory {dir_to_delete} created successfully.")
+                if not os.path.exists(dir_to_extract):
+                    os.makedirs(dir_to_extract)
+                    print(f"Directory {dir_to_extract} created successfully.")
+                    logging.info(f"Directory {dir_to_extract} created successfully.")
+
+        # UPLOAD files and .tar files
+        if ("ObjectCreated" in Operation):
+             if file.endswith('.tar'):       # case upload file.TAR
+                 Filename_to_extract="/data/cvmfs/" + Bucket + ".infn.it" + "/to_extract" + dir_file[5:] + "/" + file
+                 ris=download_from_s3(Bucket, Key, Filename_to_extract)
+             else: # case upload file not .tar
+                 ris=download_from_s3(Bucket, Key, Filename)
+       
+
+        else:
+             # DELETE operation
+             if ("ObjectRemoved" in Operation):
+                # The file to be removed (file_to_be_removed) from CVMFS repo is written in a .txt file (to_delete_file) located under the to_delete folder
+                file_to_be_removed= "/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
+                to_delete_file = Filename_path + "/to_delete/" + Bucket + "-infn-it.txt"
+                with open(to_delete_file, "a") as f:
+                    f.write(file_to_be_removed + "\n")
+                ris = True
+             else:
+                print("Operation not supported.")
+                logging.info("Operation not supported.")
+                ris = False
+
+
+    except Exception as e:
+            print(f"Failed to process message: {str(e)}")
+            logging.info(f"Failed to process message: {str(e)}")    
+            ris= False
+
+    return ris
+
+
+def download_from_s3(bucket, key, Filename):    
+    s3=S3_client_setup()
+    try:        
         s3.download_file(bucket, key, Filename)
-        end_download = datetime.now()
-        print(f"Successfully downloaded {key} to {Filename} in {end_download - start_download}")
-        await asyncio.sleep(0.1)
+        print(f"Successfully downloaded {key} to {Filename}.")
+        logging.info(f"Successfully downloaded {key} to {Filename}.")
         return True
 
     except FileNotFoundError:
-        print(f'The specified download path is not found.')
-        return False
+        print(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
+        logging.info(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
+        # controllo che non esista il file e se non esiste provo a scaricarlo in /tmp
+        if not os.path.exists(os.path.dirname(download_path)):
+           print(f"Download path not found. Defaulting to /tmp.")
+           download_path = os.path.join('/tmp', os.path.basename(Filename))
+           try:
+               s3.download_file(bucket, key, download_path)
+               print(f"File {key} downloaded successfully to {download_path}")
+               return True
+           except ClientError as e:
+               print(f'File {key} NOT downloaded successfully to {download_path}')
+               logging.info(f'File {key} downloaded successfully to {download_path}')
+               return False
+        else:
+            return False
+
     except NoCredentialsError:
         print('Credentials not available.')
+        logging.info('Credentials not available.')
         return False
+
     except PartialCredentialsError:
         print('Incomplete credentials provided.')
+        logging.info('Incomplete credentials provided.')   
         return False
+
     except ClientError as e:
         # You can further refine the exception handling based on the error code
         if e.response['Error']['Code'] == '404':
             print(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
-            # Non posso fare il download di un file che su s3 non esiste, e poiché la repo cvmfs deve essere sincronizzata con s3, questo caso non viene considerato errore
+            logging.info(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
+            # Non posso fare il download di un file che su s3 non esiste, e poiché la repo cvmfs deve essere sincronizzata con s3, questo caso non viene considerato errore      
             return True
         else:
             print(f'Client error: {e}')
+            logging.info(f'Client error: {e}')   
             return False
+
     except BotoCoreError as e:
         print(f'BotoCoreError occurred: {e}')
+        logging.info(f'BotoCoreError occurred: {e}') 
         return False
+
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
+        logging.info(f'An unexpected error occurred: {e}')
         return False
 
-async def delete_from_s3(Filename):
-    try:
-        start_delete = datetime.now()
-        # operazione di ricerca e cancellazione file
-        if os.path.isfile(Filename):
-           os.remove(Filename)
-           end_delete = datetime.now()
-           print(f"File '{Filename}' successfully deleted in {end_delete - start_delete}.")
-        else:
-           # cancellare un file che non esiste non costituisce errore
-           print(f"File '{Filename}' was not found.")
-        await asyncio.sleep(0.1)
-        return True
-
-    except Exception as e:
-        print(f'An error occurred while trying to delete the file: {e}')
-        return False
-
-
-def cvmfs_transaction(queue):
-    try:
-        repo=queue+".infn.it"
-        # Verifica se la repo è in transaction
-        # sudo cvmfs_server list | grep repo02.infn.it deve contenere la stringa "in transaction"
-        resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
-        resp1 = subprocess.run(["grep", repo], input=resp.stdout, capture_output=True)
-        if "transaction" in resp1.stdout.decode('utf-8'):
-            print(f"The repository '{repo}' is in a transaction.")
-        else:
-            subprocess.run(["sudo", "cvmfs_server", "transaction",repo], check=True)
-            print("cvmfs_server transaction successfull.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error in cvmfs-server transaction operation: {e}")
-        cvmfs_abort(queue)
-
-def cvmfs_publish(queue):
-    try:
-        queue_name=queue+".infn.it"
-        subprocess.run(["sudo", "cvmfs_server", "publish",queue_name], check=True)
-        print("cvmfs_server publish successfull.")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error in cvmfs-server publish operation: {e}")
-        return False
-
-
-def cvmfs_abort(queue):
-    try:
-        queue_name=queue+".infn.it"
-        subprocess.run(["sudo", "cvmfs_server", "abort", "-f", queue_name], check=True)
-        print("cvmfs_server abort successfull.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error in cvmfs-server abort operation: {e}")
-
-
-# Async function to process a batch of messages
-async def process_messages(channel, queue, messages, methods):
-    print(f"Processing {len(messages)} messages from {queue}:")
-    tasks = [] #  boolean vector
-    
-    # CVMFS transaction 
-    #cvmfs_transaction(queue)
-    
-        # Procedo con il download degli N messaggi
-    for message in messages:
-        msg=json.loads(message.decode("utf-8")) # La stringa message per essere trattata come dizionario va passata alla funzione json.loads
-        try:
-            Bucket = msg['Records'][0]['s3']['bucket']['name']   # Bucket=repo01
-            Key = msg['Records'][0]['s3']['object']['key']       # key=cvmfs/netCDF-92
-            dir_file, file = os.path.split(Key)                  # dir_file=cvmfs, file=netCDF-92
-            Operation = msg['Records'][0]['eventName']           # Operation=ObjectCreated:Put ==> download
-            print(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
-            
-            #Filename="/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file    
-            Filename="/home/ubuntu/my_consumers/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
-            Filename_path = os.path.dirname(Filename)
-
-            # Create the directory for the file path (ignoring the file itself if present), even with delete operation
-            if not os.path.exists(Filename_path):
-                   os.makedirs(Filename_path)
-                   print(f"Directory {Filename_path} created successfully.")
-
-            # DOWNLOAD
-            if ("ObjectCreated" in Operation):
-               tasks.append(download_from_s3(Bucket, Key, Filename))
-            else:
-                if ("ObjectRemoved" in Operation):
-                   # DELETE
-                   tasks.append(delete_from_s3(Filename))
-                else:
-                   print("Operation not supported.")
-
-        except Exception as e:
-            print(f"Failed to process message: {str(e)}")
-     
-    
-    results = await asyncio.gather(*tasks)
-
-    #if (all(results) and cvmfs_publish(queue) == True):
-    if all(results):
-             # download or delete operations successfull acknowledge the bunch of messages
-             channel.basic_ack(delivery_tag=methods[-1].delivery_tag, multiple=True)
-             print(f"Acknowledged {len(messages)} messages from {queue}.")
-             messages.clear()
-    else:
-        print(f"Some operations failed. Not acknowledging {len(messages)} of messages from {queue}.")
-        #cvmfs_abort(queue) 
-
-
-
-# Async function to consume messages from a specific queue
-async def rabbitmq_consumer(queue):
+# RabbitMQ connection
+def connect_rabbitmq():
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
     ssl_context = create_ssl_context()
     parameters = pika.ConnectionParameters(host=RABBITMQ_HOST,port=RABBITMQ_PORT,credentials=credentials,ssl_options=pika.SSLOptions(context=ssl_context), heartbeat=3600, blocked_connection_timeout=300,retry_delay=5, connection_attempts=3)
-    
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
+    return pika.BlockingConnection(parameters)
 
-    # Declare queue 
-    channel.queue_declare(queue=queue, durable=True, arguments={'x-queue-type':'quorum'})
-    
-    channel.basic_qos(prefetch_count=ack_threshold) 
 
-    message_buffer = []  # Buffer for storing methods
-    messages = []        # Buffer for storing messages until ACK_THRESHOLD is met
 
-    def callback(ch, method, properties, body):
+# Messages processing function 
+def callback(ch, method, properties, body):
+    ris=process_messages(body, method.routing_key)
+    if ris == True:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        print(f"Acknowledged message for {method.routing_key}.")
+        logging.info(f"Acknowledged message for {method.routing_key}.")
+    else:
+        print(f"Some operations failed. Not acknowledging message for {method.routing_key}.")
+        logging.info(f"Some operations failed. Not acknowledging message for {method.routing_key}.")
 
-        message_buffer.append(method)      # Store delivery tag for ACK
-        messages.append(body)              # Store messages 
-        print("C")
 
-        if (len(message_buffer) >= ack_threshold):  # Il caso coda vuota è trattato andando a controllare message_buffeer 
-            print("D")
-            asyncio.create_task(process_messages(ch, queue, messages, message_buffer.copy()))
-            message_buffer.clear()
 
-    print(f"Waiting for messages from {queue}...")
-    channel.basic_consume(queue=queue, on_message_callback=callback, auto_ack=False)
+# Funzione per gestire una coda con un solo thread
+class QueueWorker(threading.Thread):
+    def __init__(self, queue_name):
+        super().__init__()
+        self.queue_name = queue_name
+        self.running = True
 
-    try:
+    def run(self):
+        while self.running:
+            try:
+                connection = connect_rabbitmq()
+                channel = connection.channel()
+                channel.queue_declare(queue=self.queue_name, durable=True, arguments={'x-queue-type':'quorum'})
+                channel.basic_qos(prefetch_count=prefetch_count)
+                channel.basic_consume(queue=self.queue_name, on_message_callback=callback)
+                print(f"[✓] Listening on {self.queue_name}")
+                channel.start_consuming()
+            except Exception as e:
+                print(f"[!] Error in {self.queue_name}: {e}. Restarting...")
+                time.sleep(5)  # Attendi prima di riprovare
+
+    def stop(self):
+        self.running = False
+
+# Gestore per controllare i thread e riavviarli se necessario
+class ThreadMonitor:
+    def __init__(self, queues):
+        self.queues = queues
+        self.threads = {}
+
+    def start_threads(self):
+        for queue in self.queues:
+            self.start_thread(queue)
+
+    def start_thread(self, queue):
+        if queue not in self.threads or not self.threads[queue].is_alive():
+            print(f"[+] Starting worker for {queue}")
+            worker = QueueWorker(queue)
+            worker.start()
+            self.threads[queue] = worker
+
+    def monitor_threads(self):
         while True:
-            print("E")
-            connection.process_data_events(time_limit=1)
-            # If the queue is empty but messages are in the buffer
-            if message_buffer:
-                print("F")
-                asyncio.create_task(process_messages(channel, queue, messages, message_buffer.copy()))
-                message_buffer.clear()
-            await asyncio.sleep(0.1)  # to control the frequency of queue checks
+            for queue in self.queues:
+                self.start_thread(queue)
+            time.sleep(10)  # Controlla periodicamente lo stato dei thread
 
-    except asyncio.CancelledError:
-        print(f"Consumer for {queue} stopped!")
-        connection.close()
 
+
+def log_generation():
+    # Generate log file with current date
+    date_stamp = datetime.now().strftime("%Y-%m-%d")
+    log_filename = f"log/my_consumers_{date_stamp}.log"
+    # Configure logging: https://docs.python.org/3/howto/logging.html
+    logging.basicConfig(
+     level=logging.INFO,                   # Set the logging level: INFO, ERROR, DEBUG
+     filename=log_filename,                 # Specify the log file name
+     filemode='a',                          # Append to the file if it exists
+     format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+
+
+# Getting RabbitMQ queues
 def list_queues():
     try:
         url = f'{RABBITMQ_URL}/api/queues'
-        #context=create_ssl_context()
         create_ssl_context()
         requests.packages.urllib3.disable_warnings()  # To disable warnings in requests vendor urllib3
         response = requests.get(url, auth=(RABBITMQ_USER, RABBITMQ_PASSWORD), verify=False)
@@ -277,61 +293,56 @@ def list_queues():
         if response.status_code == 200:
             queues = response.json()
             filtered_queues = [queue['name'] for queue in queues if queue['name'] not in RABBITMQ_EXCLUDED_QUEUES and 'amq.gen' not in  queue['name']]
-            #print(f"List of filtered Queue Names: {filtered_queues}")
             return filtered_queues
         else:
             print(f"Failed to fetch queues. Status code: {response.status_code}")
+            logging.info(f"Failed to fetch queues. Status code: {response.status_code}")
             return []
 
     except requests.exceptions.RequestException as e:
        print(f"Error while connecting to RabbitMQ API: {e}")
        return []
 
+# To check the RabbitMQ queues and activatong a new thread for new queues
+def monitor_threads():
+    """
+    Controlla lo stato dei thread e li riavvia se necessario.
+    """
+    while True:
+        logging.info("Verifica delle code attive...")
+        current_queues = list_queues()
 
+        for queue in current_queues:
+            if queue not in running_threads or not running_threads[queue].is_alive():
+                logger.info(f"Avvio del thread per la coda: {queue}")
+                thread = threading.Thread(target=worker, args=(queue,), daemon=True)
+                running_threads[queue] = thread
+                thread.start()
 
-async def main():
-    # Generate log file with current date
-    date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"log/my_consumers_{date_stamp}.log"
+        time.sleep(CHECK_INTERVAL)
 
-    # Configure logging
-    logging.basicConfig(
-     level=logging.DEBUG,                   # Set the logging level
-     filename=log_filename,                 # Specify the log file name
-     filemode='a',                          # Append to the file if it exists
-     format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-
-    # List all RabbitMQ eligible queues
-    queues=list_queues()
+def main():
     
-    # Start multiple consumers, one per queue
-    tasks = []
-    for queue in queues:
-        task = asyncio.create_task(rabbitmq_consumer(queue))
-        tasks.append(task)
+    log_generation()        # questo check va fatto ruotare? 
+    #monitor_threads()
+    QUEUES=list_queues()    # questo check andra' fatto periodicamente, ad sempio ogni 30 minuti
     
-    # Wait for all consumer tasks to run indefinitely
-    await asyncio.gather(*tasks)
-
+    #QUEUES=['repo01']
+    
+    monitor = ThreadMonitor(QUEUES)
+    monitor.start_threads()
+    monitor.monitor_threads()
 
 
 if __name__ == "__main__":
-
+    
     try:
-        # Run the event loop
-        asyncio.run(main())
-
+        main()
     except KeyboardInterrupt:
         print('Interrupted')
         try:
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-
-
-
-
-
 
 

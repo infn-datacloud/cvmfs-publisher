@@ -82,9 +82,8 @@ def list_bucket_content(bucket):
         return(bucket_objects)
 
 
-
+# Main operations
 try:
-
         with open(output_file, 'a') as f1:
                 f1.write("TIME\tBucket\tFilename\tUploadTime\n")   
 

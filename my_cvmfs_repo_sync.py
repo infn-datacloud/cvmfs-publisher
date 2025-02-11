@@ -37,10 +37,10 @@ def delete_temp_files(directory):
 # This function syncronizes the publisher folders with the cvmfs repositories.
 def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
 
-    for my_cvmfs_repo in os.listdir(my_cvmfs_path):     # my_cvmfs_repo=repo01.infn.it    
+    for cvmfs_repo in os.listdir(my_cvmfs_path):     # cvmfs_repo=repo01.infn.it    
         
-        folder_path  = os.path.join(my_cvmfs_path, my_cvmfs_repo)
-        cvmfs_folder = os.path.join(cvmfs_path, my_cvmfs_repo)
+        folder_path  = os.path.join(my_cvmfs_path, cvmfs_repo)
+        cvmfs_folder = os.path.join(cvmfs_path, cvmfs_repo)
         
         if os.path.isdir(folder_path):
             # Check files in /data/cvmfs/reponame folder and move them into the corresponding CVMFS repository
@@ -48,16 +48,16 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
 
             if files:
                 sync_time=datetime.now()
-                print(f"Syncronization process for CVMFS repository {my_cvmfs_repo} started at {sync_time}")
-                logging.info(f"Syncronization process for CVMFS repository {my_cvmfs_repo} started.")
+                print(f"Syncronization process for CVMFS repository {cvmfs_repo} started at {sync_time}")
+                logging.info(f"Syncronization process for CVMFS repository {cvmfs_repo} started.")
                 
                 try:
                     # Start a CVMFS transaction if the repo is not yet in a transaction.
                     # 'sudo cvmfs_server list | grep repo' must contain the string "in transaction"
                     resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
-                    resp1 = subprocess.run(["grep", my_cvmfs_repo], input=resp.stdout, capture_output=True)
+                    resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
                     if not "transaction" in resp1.stdout.decode('utf-8'):
-                       res=subprocess.run(["cvmfs_server", "transaction", my_cvmfs_repo], capture_output=True,text=True, check=True)
+                       res=subprocess.run(["cvmfs_server", "transaction", cvmfs_repo], capture_output=True,text=True, check=True)
 
                        logging.info(f"{res.stdout}")
                        if res.stderr:
@@ -81,14 +81,14 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                     delete_temp_files(cvmfs_folder)
                     
                     # Execute CVMFS publish
-                    res=subprocess.run(["cvmfs_server", "publish", my_cvmfs_repo], capture_output=True,text=True,check=True)
+                    res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True,text=True,check=True)
                     logging.info(f"{res.stdout}")
                     if res.stderr:
                         print(f"CVMFS publish for {cvmfs_folder} error: {res.stderr}")
                         logging.error(f"CVMFS publish for {cvmfs_folder} error: {res.stderr}")
                     else:
-                        print(f"CVMFS publish for {my_cvmfs_repo} successfully completed.")
-                        logging.info(f"CVMFS publish for {my_cvmfs_repo} successfully completed.")
+                        print(f"CVMFS publish for {cvmfs_repo} successfully completed.")
+                        logging.info(f"CVMFS publish for {cvmfs_repo} successfully completed.")
                         # Remove files from /data/cvmfs/repo only after publish successfully finished
                         for file_name in files:
                             os.remove(os.path.join(folder_path, file_name))
@@ -96,14 +96,14 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                         logging.info(f"Files removed from /data/cvmfs/{cvmfs_folder}.")
 
                     sync_end_time=datetime.now()
-                    print(f"Syncronization process for the CVMFS repository {my_cvmfs_repo} successfully completed at {sync_end_time}.")
-                    logging.info(f"Syncronization process for the CVMFS repository {my_cvmfs_repo} successfully completed.")
+                    print(f"Syncronization process for the CVMFS repository {cvmfs_repo} successfully completed at {sync_end_time}.")
+                    logging.info(f"Syncronization process for the CVMFS repository {cvmfs_repo} successfully completed.")
 
                 except subprocess.CalledProcessError as e:
-                    print(f"CVMFS transaction ERROR for {my_cvmfs_repo} repository: {e}, aborting transaction.")
-                    logging.info(f"CVMFS transaction ERROR for {my_cvmfs_repo} repository: {e}, aborting transaction.")
+                    print(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
+                    logging.info(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
                     # Transaction abort in case of error
-                    res=subprocess.run(["cvmfs_server", "abort", "-f", my_cvmfs_repo], capture_output=True,text=True,check=False)
+                    res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
                     logging.info(f"{res.stdout}")
                     if res.stderr:
                        logging.error(f"{res.stderr}")
@@ -113,17 +113,17 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                     logging.error(f"Unexpected error: {e}")
            
             # case files to DELETE
-            files_to_delete = my_cvmfs_path + "/" + my_cvmfs_repo + "/to_delete/"  + my_cvmfs_repo.split('.')[0] + "-infn-it.txt"
+            files_to_delete = my_cvmfs_path + "/" + cvmfs_repo + "/to_delete/"  + cvmfs_repo.split('.')[0] + "-infn-it.txt"
             if os.path.exists(files_to_delete) and (os.path.getsize(files_to_delete) > 0):  # check file existance and not empty
-                print(f"Starting removing files for {my_cvmfs_repo} CVMFS repository ..")
-                logging.info(f"Starting removing files for {my_cvmfs_repo} CVMFS repository ..")
-                delete_cvmfs_files(files_to_delete,my_cvmfs_repo)
+                print(f"Starting removing files for {cvmfs_repo} CVMFS repository ..")
+                logging.info(f"Starting removing files for {cvmfs_repo} CVMFS repository ..")
+                delete_cvmfs_files(files_to_delete,cvmfs_repo)
 
             # case .tar files to EXTRACT
-            to_extract_path = my_cvmfs_path + "/" + my_cvmfs_repo + "/to_extract/"
+            to_extract_path = my_cvmfs_path + "/" + cvmfs_repo + "/to_extract/"
             if os.path.isdir(to_extract_path) and os.listdir(to_extract_path):   # check esistenza cartella e dir non vuota
                    tar_files = [f for f in os.listdir(to_extract_path) if os.path.isfile(os.path.join(to_extract_path, f))]
-                   cvmfs_extract(my_cvmfs_repo,tar_files)  # my_cvmfs_repo=repo01.infn.it
+                   cvmfs_extract(cvmfs_repo,tar_files)  # cvmfs_repo=repo01.infn.it
 
 
 def delete_cvmfs_files(to_delete_file,cvmfs_repo):

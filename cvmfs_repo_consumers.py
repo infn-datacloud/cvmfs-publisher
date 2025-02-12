@@ -267,7 +267,7 @@ class ThreadMonitor:
 # Generate log function
 def log_generation():
     date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"log/my_consumers_{date_stamp}.log"
+    log_filename = f"log/cvmfs_repo_consumers-{date_stamp}.log"
     logging.basicConfig(
      level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
      filename=log_filename,                 # Specify log file name

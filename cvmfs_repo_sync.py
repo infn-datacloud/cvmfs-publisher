@@ -260,7 +260,7 @@ def main():
 
     # Generate log file with current date
     date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"log/my_cvmfs_repo_sync_{date_stamp}.log"
+    log_filename = f"log/cvmfs_repo_sync-{date_stamp}.log"
 
     # Logging configuration
     logging.basicConfig(

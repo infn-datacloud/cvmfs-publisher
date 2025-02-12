@@ -15,7 +15,7 @@ import os, sys
 from datetime import datetime
 import requests
 
-with open("my_consumers_parameters.json") as json_data_file:
+with open("cvmfs_repo_consumers_parameters") as json_data_file:
     data = json.load(json_data_file)
 
 RABBITMQ_HOST               = data["rabbitmq"]['host']
@@ -38,7 +38,7 @@ SSL_CL_CERT = WDIR_PATH + client_cert
 SSL_CL_KEY  = WDIR_PATH + client_key
 
 prefetch_count=10
-RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','datacloud','delcorso', 'fanzago','gmalatesta','sgaravat', 'spiga','trace', 'repo31', 'repo32']
+RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','datacloud','delcorso', 'fanzago','gmalatesta','sgaravat', 'spiga','trace']
 
 # SSL context for secure connection
 def create_ssl_context():

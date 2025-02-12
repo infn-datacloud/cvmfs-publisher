@@ -92,8 +92,8 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):
                         # Remove files from /data/cvmfs/repo only after publish successfully finished
                         for file_name in files:
                             os.remove(os.path.join(folder_path, file_name))
-                        print(f"Files removed from /data/cvmfs/{cvmfs_folder}.")
-                        logging.info(f"Files removed from /data/cvmfs/{cvmfs_folder}.")
+                        print(f"Files removed from /data/cvmfs{cvmfs_folder}.")
+                        logging.info(f"Files removed from /data/cvmfs{cvmfs_folder}.")
 
                     sync_end_time=datetime.now()
                     print(f"Syncronization process for the CVMFS repository {cvmfs_repo} successfully completed at {sync_end_time}.")

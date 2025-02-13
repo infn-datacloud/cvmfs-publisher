@@ -271,7 +271,6 @@ def log_generation():
 def main():
 
     log_generation()
-    
     while True:
         cvmfs_repo_sync(my_cvmfs_path, cvmfs_path)
         time.sleep(60)                                  # Wait 60 seconds before check again 

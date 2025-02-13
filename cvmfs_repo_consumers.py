@@ -267,7 +267,7 @@ class ThreadMonitor:
 # Generate log function
 def log_generation():
     date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"log/cvmfs_repo_consumers-{date_stamp}.log"
+    log_filename = f"/var/log/publisher/cvmfs_repo_consumers-{date_stamp}.log"
     logging.basicConfig(
      level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
      filename=log_filename,                 # Specify log file name
@@ -277,7 +277,7 @@ def log_generation():
 
 
 # Getting RabbitMQ queues
-def list_queues():
+def get_queues():
     try:
         url = f'{RABBITMQ_URL}/api/queues'
         create_ssl_context()
@@ -301,7 +301,7 @@ def list_queues():
 def main():
     
     log_generation()        
-    QUEUES=list_queues()    # to be done periodically, e.g. every 30 minutes
+    QUEUES=get_queues()    # to be done periodically, e.g. every 30 minutes
     monitor = ThreadMonitor(QUEUES)
     monitor.start_threads()
     monitor.monitor_threads()

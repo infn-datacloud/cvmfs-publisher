@@ -256,20 +256,22 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                     logging.error(f"Unexpected error: {e}")
 
 
-def main():
-
+def log_generation():
     # Generate log file with current date
     date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"log/cvmfs_repo_sync-{date_stamp}.log"
-
-    # Logging configuration
+    log_filename = f"/var/log/publisher/cvmfs_repo_sync-{date_stamp}.log"
     logging.basicConfig(
-     level=logging.INFO,                                # Set the logging level
-     filename=log_filename,                             # Specify the log file name
-     filemode='a',                                      # Append to the file if it exists
+     level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
+     filename=log_filename,                 # Specify log file name
+     filemode='a',                          # Append to the file if it exists
      format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
+
+def main():
+
+    log_generation()
+    
     while True:
         cvmfs_repo_sync(my_cvmfs_path, cvmfs_path)
         time.sleep(60)                                  # Wait 60 seconds before check again 

@@ -19,14 +19,11 @@ def delete_temp_files(directory):
     # re=Regular expression to match filenames
     pattern = re.compile(r".*\.[a-fA-F0-9]{8}$")
     
-    # Loop through files in the specified directory
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
         
-        # Check if it's a file and matches the pattern
         if os.path.isfile(file_path) and pattern.match(filename):
             try:
-                # Delete the file
                 print(f"Deleting temparary file {filename} ...")
                 os.remove(file_path)
                 print(f"{filename} successfully deleted")
@@ -112,14 +109,14 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):
                     print(f"Unexpected error: {e}")
                     logging.error(f"Unexpected error: {e}")
            
-            # case files to DELETE
+            # DELETE files
             files_to_delete = my_cvmfs_path + "/" + cvmfs_repo + "/to_delete/"  + cvmfs_repo.split('.')[0] + "-infn-it.txt"
-            if os.path.exists(files_to_delete) and (os.path.getsize(files_to_delete) > 0):  # check file existance and not empty
+            if os.path.exists(files_to_delete) and (os.path.getsize(files_to_delete) > 0):  # check if file exists and it is not empty
                 print(f"Starting removing files for {cvmfs_repo} CVMFS repository ..")
                 logging.info(f"Starting removing files for {cvmfs_repo} CVMFS repository ..")
                 delete_cvmfs_files(files_to_delete,cvmfs_repo)
 
-            # case .tar files to EXTRACT
+            # EXTRACT .tar files
             to_extract_path = my_cvmfs_path + "/" + cvmfs_repo + "/to_extract/"
             if os.path.isdir(to_extract_path) and os.listdir(to_extract_path):   
                    tar_files = [f for f in os.listdir(to_extract_path) if os.path.isfile(os.path.join(to_extract_path, f))]
@@ -132,8 +129,9 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
               files = f.readlines()    
          
          remaining_files = []       
-         # Open a CVMFS transaction
+         
          try:
+            # CVMFS TRANSACTION
             # Start a CVMFS transaction if the repo is not yet in a transaction.
             resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
             resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
@@ -176,7 +174,7 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                 remaining_files.append(file)  # Keep the file if deletion fails
         
 
-            # Execute CVMFS publish
+            # CVMFS PUBLISH
             res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True,text=True,check=True)
             logging.info(f"{res.stdout}")
             if res.stderr:
@@ -198,7 +196,7 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
          except subprocess.CalledProcessError as e:
                     print(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
                     logging.info(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
-                    # Transaction abort in case of error
+                    # CVMFS ABORT in case of error
                     res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
                     print(f"{res.stdout}")
                     logging.info(f"{res.stdout}")
@@ -232,7 +230,7 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                        if res.stderr:
                           logging.error(f"{res.stderr}")
                     
-                    # CVMFS ingest
+                    # CVMFS INGEST
                     my_tar_file= my_cvmfs_repo_extract_path + tar_file
                     # my_tar_file= cvmfs/repo21.infn.it/to_extract/oidc-agent.5.1.0.tar
                     subprocess.run(["cvmfs_server", "ingest", "-t", my_tar_file, "-b", "software/" , cvmfs_repo], capture_output=True, text=True, check=True)
@@ -257,9 +255,10 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
 
 
 def log_generation():
-    # Generate log file with current date
+    
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_filename = f"/var/log/publisher/cvmfs_repo_sync-{date_stamp}.log"
+
     logging.basicConfig(
      level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
      filename=log_filename,                 # Specify log file name

@@ -1,6 +1,6 @@
-# my_consumers.py
-# Author: Francesca Del Corso
-# Last update: 11 Feb 2025
+# cvmfs_repo_consumers.py
+# Author: FDC
+# @ 17 Feb 2025
 
 import pika
 import threading
@@ -10,12 +10,13 @@ import json
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError, BotoCoreError
 import logging
-import logging.handlers
+from logging.handlers import TimedRotatingFileHandler
 import os, sys
 from datetime import datetime
 import requests
 
-with open("cvmfs_repo_consumers_parameters") as json_data_file:
+
+with open("cvmfs_repo_consumers_parameters.json") as json_data_file:
     data = json.load(json_data_file)
 
 RABBITMQ_HOST               = data["rabbitmq"]['host']
@@ -32,13 +33,16 @@ ca_cert                     = data["ssl"]['ca_cert']
 client_cert                 = data["ssl"]['client_cert']
 client_key                  = data["ssl"]['client_key']
 
-WDIR_PATH   = "/home/ubuntu/my_consumers/"
+WDIR_PATH   = "/home/ubuntu/consumers/"
 SSL_CA_CERT = WDIR_PATH + ca_cert
 SSL_CL_CERT = WDIR_PATH + client_cert
 SSL_CL_KEY  = WDIR_PATH + client_key
 
-prefetch_count=10
-RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','datacloud','delcorso', 'fanzago','gmalatesta','sgaravat', 'spiga','trace']
+PREFETCH_COUNT=10
+CHECK_INTERVAL= 1800 # check queues every 30 minutes
+running_threads = {}
+RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','trace']
+
 
 # SSL context for secure connection
 def create_ssl_context():
@@ -85,9 +89,9 @@ def process_messages(message, queue):
         Operation = msg['Records'][0]['eventName']           # Operation=ObjectCreated:Put ==> download
         print(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
         logging.info(f"Operation: {Operation}, Bucket: {Bucket}, Key: {Key}")
-           
+        
         Filename="/data/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
-        Filename_path = os.path.dirname(Filename)            
+        Filename_path = os.path.dirname(Filename)            # Filename_path=/data/cvmfs/repo17.infn.it
 
         # Create the directory for the file path (ignoring the file itself if present), even with delete operation
         if not os.path.exists(Filename_path):
@@ -117,7 +121,7 @@ def process_messages(message, queue):
         else:
              # DELETE operation
              if ("ObjectRemoved" in Operation):
-                # The file to be removed from CVMFS repo is written in a .txt file in to_delete/ folder
+                # The file to be removed (file_to_be_removed) from CVMFS repo is written in a .txt file (to_delete_file) located under the to_delete folder
                 file_to_be_removed= "/cvmfs/" + Bucket + ".infn.it" + dir_file[5:] + "/" + file
                 to_delete_file = Filename_path + "/to_delete/" + Bucket + "-infn-it.txt"
                 with open(to_delete_file, "a") as f:
@@ -148,7 +152,7 @@ def download_from_s3(bucket, key, Filename):
     except FileNotFoundError:
         print(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
         logging.info(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
-        # controllo che non esista il file e se non esiste provo a scaricarlo in /tmp
+        
         if not os.path.exists(os.path.dirname(download_path)):
            print(f"Download path not found. Defaulting to /tmp.")
            download_path = os.path.join('/tmp', os.path.basename(Filename))
@@ -177,7 +181,7 @@ def download_from_s3(bucket, key, Filename):
         if e.response['Error']['Code'] == '404':
             print(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
             logging.info(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
-            # Downloading a non existing S3 file is not considered an error      
+            # No download if the file does not exist on s3, this case is not considered an error      
             return True
         else:
             print(f'Client error: {e}')
@@ -203,7 +207,7 @@ def connect_rabbitmq():
 
 
 
-# Messages processing function 
+# Messages processing function
 def callback(ch, method, properties, body):
     ris=process_messages(body, method.routing_key)
     if ris == True:
@@ -215,62 +219,32 @@ def callback(ch, method, properties, body):
         logging.info(f"Some operations failed. Not acknowledging message for {method.routing_key}.")
 
 
+# Worker manages  messages of a specific queue
+def worker(queue_name):
 
-# to manage a queue with a single thread
-class QueueWorker(threading.Thread):
-    def __init__(self, queue_name):
-        super().__init__()
-        self.queue_name = queue_name
-        self.running = True
+    try:
+        connection = connect_rabbitmq()
+        channel = connection.channel()
+        channel.basic_qos(prefetch_count=PREFETCH_COUNT)
+        channel.queue_declare(queue=queue_name, durable=True, arguments={'x-queue-type':'quorum'})
 
-    def run(self):
-        while self.running:
-            try:
-                connection = connect_rabbitmq()
-                channel = connection.channel()
-                channel.queue_declare(queue=self.queue_name, durable=True, arguments={'x-queue-type':'quorum'})
-                channel.basic_qos(prefetch_count=prefetch_count)
-                channel.basic_consume(queue=self.queue_name, on_message_callback=callback)
-                print(f"[✓] Listening on {self.queue_name}")
-                channel.start_consuming()
-            except Exception as e:
-                print(f"[!] Error in {self.queue_name}: {e}. Restarting...")
-                time.sleep(5)  # wait before trying again
-
-    def stop(self):
-        self.running = False
-
-# To monitor threads and restart them if necessary
-class ThreadMonitor:
-    def __init__(self, queues):
-        self.queues = queues
-        self.threads = {}
-
-    def start_threads(self):
-        for queue in self.queues:
-            self.start_thread(queue)
-
-    def start_thread(self, queue):
-        if queue not in self.threads or not self.threads[queue].is_alive():
-            print(f"[+] Starting worker for {queue}")
-            worker = QueueWorker(queue)
-            worker.start()
-            self.threads[queue] = worker
-
-    def monitor_threads(self):
-        while True:
-            for queue in self.queue
-                self.start_thread(queue)
-            time.sleep(10)  # wait before trying again
+        channel.basic_consume(queue=queue_name, on_message_callback=callback)
+        print(f"[✓] Listening on {queue_name}")
+        logging.info(f"[✓] Listening on: {queue_name}")
+        channel.start_consuming()
+    except Exception as e:
+        print(f"Error in {queue_name} queue thread: {e}")
+        logging.error(f"Error in {queue_name} queue thread: {e}")
 
 
-# Generate log function
 def log_generation():
+
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_filename = f"/var/log/publisher/cvmfs_repo_consumers-{date_stamp}.log"
+
     logging.basicConfig(
      level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
-     filename=log_filename,                 # Specify log file name
+     filename=log_filename,                 # Specify the log file name
      filemode='a',                          # Append to the file if it exists
      format='%(asctime)s - %(levelname)s - %(message)s'
     )
@@ -297,15 +271,28 @@ def get_queues():
        print(f"Error while connecting to RabbitMQ API: {e}")
        return []
 
+# Check the RabbitMQ queues and activate a new thread for new queues
+def monitor_threads():
+    """
+    Controlla lo stato dei thread e li riavvia se necessario.
+    """
+    while True:
+        logging.info("Verify active queues ...")
+        current_queues = get_queues()
+    
+        for queue in current_queues:
+            if queue not in running_threads or not running_threads[queue].is_alive():
+                print(f"Starting thread for queue: {queue}")
+                logging.info(f"Starting thread for queue: {queue}")
+                thread = threading.Thread(target=worker, args=(queue,), daemon=True)
+                running_threads[queue] = thread
+                thread.start()
+
+        time.sleep(CHECK_INTERVAL)
 
 def main():
-    
     log_generation()        
-    QUEUES=get_queues()    # to be done periodically, e.g. every 30 minutes
-    monitor = ThreadMonitor(QUEUES)
-    monitor.start_threads()
-    monitor.monitor_threads()
-
+    monitor_threads()
 
 if __name__ == "__main__":
     

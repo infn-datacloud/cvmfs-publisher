@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # Register client
     if not BUCKET:
-        BUCKET = input('Insert you username (mrossi)... ')
+        BUCKET = input('Insert your S3 bucket name (e.g. mrossi) ... ')
     user_data =  {
         "client_name": BUCKET,
         "grant_types": [

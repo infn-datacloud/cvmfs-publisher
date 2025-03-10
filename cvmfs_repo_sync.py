@@ -160,7 +160,7 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                    print("Target dir:", folder_path)
                    if os.path.exists(folder_path) and os.path.isdir(folder_path):
                       # The entire folder in /cvmfs/reponame/software/ is to be deleted, not the software dir
-                      shutil.rmtree(folder_path)                                  # valuatare cvmfs_server ingest -d 
+                      shutil.rmtree(folder_path)                                  
                       print(f"Deleted: {folder_path}.")
                       logging.info(f"Deleted: {folder_path}")
                    else:

@@ -2,7 +2,7 @@
 # Last update: 15 Jan 2025
 # @ This script uploads or deletes files to S3 in the S3 cvmfs user bucket. BEFORE RUNNING THIS SCRIPT, OIDC-AGENT PID AND SOCK must be loaded. 
 # S3 access occurs thanks to the IAM TOKENS obtained with oidc-agent and IAM https://iam.cloud.infn.it/.
-# The script does not handle any NETWORK PROBLEMS that CAUSE THE SENDING FLOW TO BE INTERRUPTED. WHEN CONNECTIVITY RETURN THE SCRIPT STARTS FROM THE FIRST REPO.
+# The script does not handle NETWORK PROBLEMS that CAUSE SENDING FLOW INTERRUPTION. WHEN CONNECTIVITY RETURNS, THE SCRIPT STARTS FROM THE FIRST REPO.
 
 import boto3
 import os 

@@ -1,0 +1,11 @@
+[Unit]
+Description=publisher queue consumer to create new CVMFS repo
+
+[Service]
+WorkingDirectory=/home/ubuntu/consumers/
+ExecStart=/bin/bash -c 'source /home/ubuntu/consumers/venv/bin/activate && python3 /home/ubuntu/consumers/consume_publisher_msg.py -wdir /home/ubuntu/consumers/ -cfg configuration-publisher.cfg'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

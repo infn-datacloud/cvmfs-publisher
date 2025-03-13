@@ -1,0 +1,13 @@
+[Unit]
+Description=CVMFS queues consumers service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/consumers/
+ExecStart=/usr/bin/python3 -u /home/ubuntu/consumers/cvmfs_repo_consumers.py
+Restart=always
+RestartSec=3
+SyslogIdentifier=cvmfs-repo-consumers
+
+[Install]
+WantedBy=multi-user.target

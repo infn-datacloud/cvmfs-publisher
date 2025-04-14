@@ -2,6 +2,7 @@
 Description=publisher queue consumer to create new CVMFS repo
 
 [Service]
+Type=simple
 WorkingDirectory=/home/ubuntu/consumers/
 ExecStart=usr/bin/python3 -u /home/ubuntu/consumers/publisher_consumer.py
 Restart=always

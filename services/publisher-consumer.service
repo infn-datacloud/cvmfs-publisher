@@ -9,6 +9,5 @@ Restart=always
 RestartSec=3
 SyslogIdentifier=publisher_consumer
 
-
 [Install]
 WantedBy=multi-user.target

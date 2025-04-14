@@ -6,6 +6,8 @@ WorkingDirectory=/home/ubuntu/consumers/
 ExecStart=usr/bin/python3 -u /home/ubuntu/consumers/publisher_consumer.py
 Restart=always
 RestartSec=3
+SyslogIdentifier=publisher_consumer
+
 
 [Install]
 WantedBy=multi-user.target

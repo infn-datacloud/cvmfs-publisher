@@ -1,5 +1,5 @@
 [Unit]
-Description=publisher queue consumer to create new CVMFS repo
+Description=CVMFS publisher queue consumer
 
 [Service]
 Type=simple

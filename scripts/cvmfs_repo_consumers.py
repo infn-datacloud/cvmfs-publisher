@@ -16,7 +16,7 @@ from datetime import datetime
 import requests
 
 
-with open("cvmfs_repo_consumers_parameters.json") as json_data_file:
+with open("parameters.json") as json_data_file:
     data = json.load(json_data_file)
 
 RABBITMQ_HOST               = data["rabbitmq"]['host']

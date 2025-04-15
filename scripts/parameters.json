@@ -1,16 +1,25 @@
 {
+    "vault": {
+	"vault_url": "https://vault-dev.cloud.infn.it:8200",
+        "role_id": "XXXXXXXXXXXXXX",
+        "secret_id":"XXXXXXXXXXXXXXX" 
+        },
     "rabbitmq":{
         "host": "192.135.24.151",
 	"hostname": "rabbitmq",
         "port": 5671,
+	"url": "https://192.135.24.151:15671/",
+        "exchange": "notification",
         "admin_user": "rabbitmq",
-        "admin_password": "",
-        "url": "https://192.135.24.151:15671/",
-	"exchange":"notification"
+        "admin_password": "XXXXXXXXXXX",
+	"rgw_user": "notification",
+	"rgw_password": "XXXXXXXXXXXXXX",
+	"publisher_queue":"publisher"
+
         },
     "ceph-rgw":{
-        "access_key": "",
-        "secret_key": "",
+        "access_key": "XXXXXXXXXXXX",
+        "secret_key": "XXXXXXXXXXXXX",
         "url": "https://rgw.cloud.infn.it/",
         "region": "default",
         "role": "cvmfsAccess"

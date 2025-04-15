@@ -3,109 +3,170 @@ import pika
 import pika.exceptions
 import hvac
 import ssl
+import json
 import argparse
 import subprocess
 import logging
-import logging.handlers
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 import shutil
-from consumer_users_queues.conf.settings import get_settings
+from datetime import datetime
+import os,sys
+
+
+with open("parameters.json") as json_data_file:
+    data = json.load(json_data_file)
+
+CVMFS_SERVER_URL            = data["cvmfs"]["stratum0_url"]
+CVMFS_UP_STORAGE            = data["cvmfs"]["upstream_storage"]
+RMQ_HOST                    = data["rabbitmq"]['host']
+RMQ_PORT                    = data["rabbitmq"]['port']
+RMQ_HOSTNAME                = data["rabbitmq"]['hostname']
+RMQ_RGW_USER                = data["rabbitmq"]['rgw_user']
+RMQ_RGW_PASSWORD            = data["rabbitmq"]['rgw_password']
+RMQ_URL                     = data["rabbitmq"]['url']
+RMQ_EXCHANGE                = data["rabbitmq"]['exchange']
+RMQ_PUBLISHER_QUEUE         = data["rabbitmq"]['publisher_queue']
+RGW_ACCESS_KEY              = data["ceph-rgw"]['access_key']
+RGW_SECRET_KEY              = data["ceph-rgw"]['secret_key']
+RGW_ENDPOINT                = data["ceph-rgw"]['url']
+RGW_REGION                  = data["ceph-rgw"]['region']
+CA_CERT                     = data["ssl"]['ca_cert']
+CLIENT_CERT                 = data["ssl"]['client_cert']
+CLIENT_KEY                  = data["ssl"]['client_key']
+V_URL                       = data["vault"]['vault_url']
+V_ROLEID                    = data["vault"]['role_id']
+V_SECRETID                  = data["vault"]['secret_id']
+
+WDIR_PATH   = "/home/ubuntu/consumers/"
+SSL_CA_CERT = WDIR_PATH + CA_CERT
+SSL_CL_CERT = WDIR_PATH + CLIENT_CERT
+SSL_CL_KEY  = WDIR_PATH + CLIENT_KEY
 
 
 def create_topic(repo):
 
-    s = get_settings()
     repo = repo.split('.')[0]
     try:
 
         sns_client = boto3.client('sns',
-        aws_access_key_id = s.ACCESS_KEY,
-        aws_secret_access_key = s.SECRET_KEY,
-        endpoint_url= s.ENDPOINT,
-        region_name='default',
+        aws_access_key_id = RGW_ACCESS_KEY,
+        aws_secret_access_key = RGW_SECRET_KEY,
+        endpoint_url= RGW_ENDPOINT,
+        region_name=RGW_REGION,
         )
-        OPERATOR_LOGGER.info('CREATING TOPIC...')
+        logging.info('CREATING TOPIC...')
         
-        attributes = {'push-endpoint' : f'amqps://{s.RMQ_USERNAME}:{s.RMQ_PASSWORD}@{s.RMQ_HOST}:{s.RMQ_PORT}' , 'amqp-exchange': s.RMQ_EXCHANGE, 'amqp-ack-level': 'broker', 'verify-ssl':'false' , 'use-ssl' : 'true' , 'persistent' : 'true'}
-        resp = sns_client.create_topic(Name= repo,
-                                    Attributes=attributes)
+        attributes = {'push-endpoint' : f'amqps://{RMQ_RGW_USER}:{RMQ_RGW_PASSWORD}@{RMQ_HOST}:{RMQ_PORT}' , 'amqp-exchange': RMQ_EXCHANGE, 'amqp-ack-level': 'broker', 'verify-ssl':'false' , 'use-ssl' : 'true' , 'persistent' : 'true'}
+        resp = sns_client.create_topic(Name= repo, Attributes=attributes)
         topic_arn = resp["TopicArn"]
-        OPERATOR_LOGGER.info(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
+        print(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
+        logging.info(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
 
     except Exception as ex:
-        OPERATOR_LOGGER.error(f'error: {ex}')
+        print(f'An unexpected error occurred: {ex}')
+        logging.error(f'An unexpected error occurred: {ex}')
 
     return True
 
 
 def delete_topic(s,repo):
 
+    repo = repo.split('.')[0]
     try:
-
         sns_client = boto3.client('sns',
-        aws_access_key_id = s.ACCESS_KEY,
-        aws_secret_access_key = s.SECRET_KEY,
-        endpoint_url= s.ENDPOINT,
-        region_name='default',
+        aws_access_key_id = RGW_ACCESS_KEY,
+        aws_secret_access_key = RGW_SECRET_KEY,
+        endpoint_url= RGW_ENDPOINT,
+        region_name=RGW_REGION,
         )
-        repo = repo.split('.')[0]
         arn = f'arn:aws:sns:bbrgwzg::{repo}'
-        resp = sns_client.delete_topic(
-            TopicArn=arn)       
-        OPERATOR_LOGGER.info(f'Topic deleted for repo {repo}')
+        resp = sns_client.delete_topic(TopicArn=arn)    
+        print(f'Topic deleted for repo {repo}')
+        logging.info(f'Topic deleted for repo {repo}')
                                  
     except Exception as ex:
-        OPERATOR_LOGGER.error(f'error: {ex}')
+        print(f'An unexpected error occurred: {ex}')
+        logging.error(f'An unexpected error occurred: {ex}')
     
     return True
+
 
 def create_queue(channel, repo):
     
-    s = get_settings()
     repo = repo.split('.')[0]
     try:
         channel.queue_declare(queue=repo, durable=True, arguments={"x-queue-type": "quorum"}, exclusive=False)
-        channel.queue_bind(
-        exchange = s.RMQ_EXCHANGE,
-        queue = repo,
-        routing_key= repo,
-        )
-        OPERATOR_LOGGER.info(f'Queue created for repo {repo}')
+        channel.queue_bind(exchange = RMQ_EXCHANGE, queue = repo, routing_key= repo)
+
+        print(f'Queue {repo} created for repo {repo}.infn.it')
+        logging.info(f'Queue {repo} created for repo {repo}.infn.it')
+        return True
 
     except pika.exceptions.ConnectionClosed as ex:
-        OPERATOR_LOGGER.warning(f'RabbitMQ client unreachable or dead: {ex}')
+        print(f'RabbitMQ client unreachable or dead: {ex}')
+        logging.warning(f'RabbitMQ client unreachable or dead: {ex}')
+        return False
     except pika.exceptions.StreamLostError as ex:
-        OPERATOR_LOGGER.warning(f'RabbitMQ lost connection: {ex}')
+        print(f'RabbitMQ lost connection: {ex}')
+        logging.warning(f'RabbitMQ lost connection: {ex}')
+        return False
     except Exception as ex:
-        OPERATOR_LOGGER.warning(f'strange error: {ex}')
+        print(f'An unexpected error occurred: {ex}')
+        logging.warning(f'An unexpected error occurred: {ex}')
+        return False
 
-    return True
 
 
+# VAUL AppRole login method
+def vault_login_approle(client):
+    try:
+        login_response = client.auth.approle.login(role_id=V_ROLEID,secret_id=V_SECRETID)
+        print("Login to Vault server successful.")
+        logging.info("Login to Vault server successful.")
+
+    except hvac.exceptions.InvalidRequest as e:
+        print("Invalid request error:", e)
+        logging.info("Invalid request error:", e)
+
+    except hvac.exceptions.Forbidden as e:
+        print("Access forbidden:", e)
+        logging.info("Access forbidden:", e)
+
+    except hvac.exceptions.VaultError as e:
+        # Generic Vault-related error
+        print("Vault error occurred:", e)
+        logging.info("Vault error occurred:", e)
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        logging.info(f"An unexpected error occurred: {e}")
+
+
+'''Retrive CVMFS repo keys from vault '''
 def get_repo_keys(msg):
-    '''Retrive CVMFS repo keys from vault '''
-
-    s = get_settings()
+    # delcorso,34158350-c746-4918-82ab-9004dd03f95b,repo32.infn.it,G
     subject = msg.split(',')[1]
     repository_name=msg.split(',')[2]
     type_repo = msg.split(',')[3]
+
     try:
-        hvacclient = hvac.Client(s.V_URL)
-        hvacclient.auth.approle.login(
-        role_id=s.V_ROLEID,
-        secret_id=s.V_SECRETID,
-        )
-        SYSLOG_LOGGER.info(f"VAULT client authenticated: {hvacclient.is_authenticated()}")
-        SYSLOG_LOGGER.info(f'Vault initialize status: {hvacclient.sys.is_initialized()}')
-        SYSLOG_LOGGER.info(f"Vault is sealed: {hvacclient.sys.is_sealed()}")
-        OPERATOR_LOGGER.info(f"VAULT client authenticated: {hvacclient.is_authenticated()}")
-        OPERATOR_LOGGER.info(f'Vault initialize status: {hvacclient.sys.is_initialized()}')
-        OPERATOR_LOGGER.info(f"Vault is sealed: {hvacclient.sys.is_sealed()}")
+        client = hvac.Client(V_URL)
+        vault_login_approle(client)
+        
+        print("VAULT client authenticated:",client.is_authenticated())
+        logging.info(f"VAULT client authenticated: {client.is_authenticated()}.")
+        print('Vault initialize status: %s' % client.sys.is_initialized())
+        logging.info(f"Vault initialize status: {client.sys.is_initialized()}. ")
+        print("Vault is sealed:", client.sys.is_sealed())
+        logging.info(f"Vault is sealed: {client.sys.is_sealed()}.")
+        
         if type_repo == 'P':    
             PATH = "secrets/data/"+subject+"/cvmfs_keys/"+repository_name+"/"
         else:
             PATH = "secrets/data/groups/"+repository_name.split('.')[0]+"/cvmfs_keys/"+repository_name+"/"
-        read_response = hvacclient.read(path=PATH)
+        
+        read_response = client.read(path=PATH)
         p = Path('/tmp/') / f'{repository_name}_keys'
         p.mkdir(exist_ok=True)
         with (p / f'{repository_name}.crt').open('w') as f:
@@ -116,131 +177,138 @@ def get_repo_keys(msg):
             f.write(read_response['data']['data']['publicKey'])
 
     except Exception as ex:
-        SYSLOG_LOGGER.warning(f'{ex}')
-        OPERATOR_LOGGER.warning(f'{ex}')
+        print(f'{ex}')
+        logging.warning(f'{ex}')
         return False
     
     return repository_name
 
 
+'''Make a CVMFS repository writable from publisher via gateway'''
 def create_repo_publisher(repo_name):
-    '''Make a CVMFS repository writable from publisher via gateway'''
-
-    s = get_settings()
-    cmd = f'sudo cvmfs_server mkfs -w {s.SERVER_URL}{repo_name} \
-    -u gw,/srv/cvmfs/{repo_name}/data/txn,{s.UP_STORAGE} \
+    
+    cmd = f'sudo cvmfs_server mkfs -w {CVMFS_SERVER_URL}{repo_name} \
+    -u gw,/srv/cvmfs/{repo_name}/data/txn,{CVMFS_UP_STORAGE} \
     -k /tmp/{repo_name}_keys -o `whoami` {repo_name}'
+    try:
 
-    # questo va ma lo commento per rimettere in uso le var, poi sarà da cancellare
-    #cmd = f'sudo cvmfs_server mkfs -w https://rgw.cloud.infn.it:443/cvmfs/{repo_name} \
-    #-u gw,/srv/cvmfs/{repo_name}/data/txn,http://cvmfs.wp6.cloud.infn.it:4929/api/v1 \
-    #-k /tmp/{repo_name}_keys -o `whoami` {repo_name}'
+       subprocess.run(cmd, shell=True, capture_output=True, check=True)
+       
+       print(f'CVMFS repository {repo_name} successfully created.')
+       logging.info(f'CVMFS repository {repo_name} successfully created.')
+       shutil.rmtree(f'/tmp/{repo_name}_keys/')
+       return True
+   
+    except subprocess.CalledProcessError as e:
+        print(f"{e.stderr.decode()}")
+        logging.info(f"{e.stderr.decode()}")
+        stderr_output = e.stderr.decode()
+        # Case repo already exists 
+        if "already exists" in stderr_output:
+            print("CVMFS repo not created.")
+            logging.info("CVMFS repo not created.")
+            shutil.rmtree(f'/tmp/{repo_name}_keys/')
+            return True
+        else:
+            return False
 
-    proc = subprocess.run(cmd, capture_output=True,
-                              text=True, shell=True, check=False)
-    if proc.returncode != 0:
-        SYSLOG_LOGGER.error(f'[{repo_name}] - {proc.stderr}')
-        OPERATOR_LOGGER.error(f'[{repo_name}] - {proc.stderr}')
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
         return False
-    else:
-        SYSLOG_LOGGER.info(f'[{repo_name}] - CVMFS repository created!')
-        OPERATOR_LOGGER.info(f'[{repo_name}] - CVMFS repository created!')
-    shutil.rmtree(f'/tmp/{repo_name}_keys/')
 
-    return True 
-
-
+'''Function called whenever a message from publisher queue is received'''
+# sent from the INFN dashboard or via CLI from the cvmfs_repo_agent.py script on the stratum0 when a user requires a new cvmfs personal/group repository.
 def callback(ch, method, properties, body):
-    '''Function called whenever a message from publisher queue is received'''
-    # This msg will be sent from the INFN dashboard (and now from the cvmfs_repo_agent.py script on the stratum0) when a user requires a new cvmfs personal/group repository
+    
     message=body.decode("utf-8")
+    print(f' [*] {message} ')               #delcorso,34158350-c746-4918-82ab-9004dd03f95b,repo32.infn.it,G
     repo_name = get_repo_keys(message)
     if repo_name is not False:
         res = create_repo_publisher(repo_name)
         if res is not True:
-            SYSLOG_LOGGER.warning(f'Cannot create CVMFS repo in publisher: {res}')
-            OPERATOR_LOGGER.warning(f'Cannot create CVMFS repo in publisher: {res}')
+            print(f'Cannot create CVMFS repo in publisher: {res}. Message NOT acknowledged.')
+            logging.warning(f'Cannot create CVMFS repo in publisher: {res}. Message NOT acknowledged.')
         else:
             create_t=create_topic(repo_name)
             if create_t is not True:
-                SYSLOG_LOGGER.warning(f'Cannot create topic for the CVMFS repo in publisher: {create_t}')
-                OPERATOR_LOGGER.warning(f'Cannot create topic for the CVMFS repo in publisher: {create_t}')
+                print(f'Cannot create topic for the CVMFS repo in publisher: {create_t}. Message NOT acknowledged.')
+                logging.warning(f'Cannot create topic for the CVMFS repo in publisher: {create_t}. Message NOT acknowledged.')
             else:
                 create_q=create_queue(ch, repo_name)
                 if create_q is not True:
-                    SYSLOG_LOGGER.warning(f'Cannot create queue for the CVMFS repo in publisher: {create_q}')
-                    OPERATOR_LOGGER.warning(f'Cannot create queue for the CVMFS repo in publisher: {create_q}')
+                    print(f'Cannot create queue for the CVMFS repo in publisher: {create_q}. Message NOT acknowledged. ')
+                    logging.warning(f'Cannot create queue for the CVMFS repo in publisher: {create_q}. Message NOT acknowledged.')
                 else:
                     ch.basic_ack(delivery_tag=method.delivery_tag)
 
+def log_generation():
+    # Generate log file with current date
+    date_stamp = datetime.now().strftime("%Y-%m-%d")
+    log_filename = f"/var/log/publisher/publisher_consumer-{date_stamp}.log"
+    logging.basicConfig(
+         level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
+         filename=log_filename,                 # Specify log file name
+         filemode='a',                          # Append to the file if it exists
+         format='%(asctime)s - %(levelname)s - %(message)s'
+    )
 
-def main(s):
 
+def main():
+        
+        log_generation()
         try: 
-            context = ssl.create_default_context(cafile=s.CA_CERT)
-            context.load_cert_chain(certfile=s.CLIENT_CERT, keyfile=s.CLIENT_KEY)
+            context = ssl.create_default_context(cafile=CA_CERT)
+            context.load_cert_chain(certfile=CLIENT_CERT, keyfile=CLIENT_KEY)
             
             # Establish connection with RabbitMQ server
-            credentials = pika.PlainCredentials(s.RMQ_USERNAME,s.RMQ_PASSWORD)
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host=s.RMQ_HOST,
-                                                                           port=s.RMQ_PORT,
+            credentials = pika.PlainCredentials(RMQ_RGW_USER,RMQ_RGW_PASSWORD)
+            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RMQ_HOST,
+                                                                           port=RMQ_PORT,
                                                                            credentials=credentials,
                                                                            ssl_options=pika.SSLOptions(
-                                                                               context, server_hostname=s.RMQ_HOSTNAME)
+                                                                               context, server_hostname=RMQ_HOSTNAME)
                                                                            )
                                                                            )
-            SYSLOG_LOGGER.info('Connected to RabbitMQ, starting consuming publisher queue...')
-            OPERATOR_LOGGER.info('Connected to RabbitMQ, starting consuming publisher queue...')
+            print('Connected to RabbitMQ, starting consuming publisher queue...')
+            logging.info('Connected to RabbitMQ, starting consuming publisher queue...')
             channel = connection.channel()
-            channel.queue_declare(queue=s.QUEUE_NEW_REPO, durable=True, arguments={"x-queue-type": "quorum"})
+            channel.queue_declare(queue=RMQ_PUBLISHER_QUEUE, durable=True, arguments={"x-queue-type": "quorum"})
             channel.basic_qos(prefetch_count=1)
             
-            # Tell RabbitMQ that callback function should receive messages from a specific queue
-            channel.basic_consume(queue=s.QUEUE_NEW_REPO,
+            # Tell RabbitMQ that callback function should receive messages from the publisher queue
+            channel.basic_consume(queue=RMQ_PUBLISHER_QUEUE,
                                   auto_ack=False,
                                   on_message_callback=callback)
             
 
             # Enter a never-ending loop that waits for data and runs callbacks whenever necessary
             print(' [*] Waiting for messages. To exit press CTRL+C')
+            logging.info(' [*] Waiting for messages. To exit press CTRL+C')
             channel.start_consuming()
 
         except pika.exceptions.ConnectionClosed as ex:
-            SYSLOG_LOGGER.warning(f'RabbitMQ client unreachable or dead: {ex}')
-            OPERATOR_LOGGER.warning(f'RabbitMQ client unreachable or dead: {ex}')
+            logging.warning(f'RabbitMQ client unreachable or dead: {ex}')
+            print(f'RabbitMQ client unreachable or dead: {ex}')
         except pika.exceptions.StreamLostError as ex:
-            SYSLOG_LOGGER.warning(f'RabbitMQ lost connection: {ex}')
-            OPERATOR_LOGGER.warning(f'RabbitMQ lost connection: {ex}')
+            logging.warning(f'RabbitMQ lost connection: {ex}')
+            print(f'RabbitMQ lost connection: {ex}')
         except Exception as ex:
-            SYSLOG_LOGGER.warning(f'Strange error: {ex}')
-            OPERATOR_LOGGER.warning(f'Strange error: {ex}')
+            logging.warning(f'Strange error: {ex}')
+            print(f'Strange error: {ex}')
 
 
 
 if __name__ == '__main__' :
+   
+      try:
+        main()
+
+      except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0) 
+
     
-    # Input arguments
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument('-cfg', '--conf_file', dest='cfg',
-                        help='configuration file')
-    PARSER.add_argument('-wdir', '--working_dir', dest='wdir',
-                        help='full path to working directory')
-    ARGS = PARSER.parse_args()
-    # Syslog logging
-    SYSLOG_LOGGER = logging.getLogger('syslog')
-    FORMATTER = logging.Formatter(' %(levelname)s - %(message)s')
-    SYSLOG_HANDLER = logging.handlers.SysLogHandler(address='/dev/log')
-    SYSLOG_HANDLER.setFormatter(FORMATTER)
-    SYSLOG_LOGGER.addHandler(SYSLOG_HANDLER)
-    SYSLOG_LOGGER.setLevel(logging.INFO)
-    # Operator logging
-    OPERATOR_LOGGER = logging.getLogger('publisher')
-    OPERATOR_FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    OPERATOR_LOGGER.setLevel(logging.INFO)
-    logg_operator = f'{ARGS.wdir}logs/publisher-consumer.log'
-    OPERATOR_HANDLER = logging.FileHandler(logg_operator, mode='w', encoding='utf-8', delay=True)
-    OPERATOR_HANDLER.setFormatter(OPERATOR_FORMATTER)
-    OPERATOR_LOGGER.addHandler(OPERATOR_HANDLER)
-    
-    settings = get_settings(ARGS)
-    main(settings)

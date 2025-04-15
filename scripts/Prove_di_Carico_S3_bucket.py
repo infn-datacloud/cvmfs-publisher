@@ -1,4 +1,5 @@
 # Prove_di_Carico_S3_bucket.py
+# Author: Francesca Del Corso
 # Last update: 15 Jan 2025
 # @ This script uploads or deletes files to S3 in the S3 cvmfs user bucket. BEFORE RUNNING THIS SCRIPT, OIDC-AGENT PID AND SOCK must be loaded. 
 # S3 access occurs thanks to the IAM TOKENS obtained with oidc-agent and IAM https://iam.cloud.infn.it/.

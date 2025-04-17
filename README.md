@@ -6,20 +6,18 @@
 
 CVMFS publisher is notified when new CVMFS repositories are created to retrieve the repository keys from Vault and make the repository accessible to the publisher via the gateway.
 
-It is implemented using the publisher_consumer.py script: 
+It is implemented using the [publisher_consumer.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/publisher_consumer.py?ref_type=heads) script. 
 
-    It establishes a secure connection with RabbitMQ to digest messages stored in the publisher queue.
-        In order to interact with RabbitMQ, the publisher RabbitMQ user with limited privileges (tag = impersonator) is used, with certificates required for the ssl connection.
-        Certificates must be stored in a directory called certs/ inside the working directory.
-    Messages contain information about the CVMFS repositories to be created:
+It establishes a secure connection with RabbitMQ to digest messages stored in the publisher queue.
+In order to interact with RabbitMQ, the publisher RabbitMQ user with limited privileges (tag = impersonator) is used, with certificates required for the ssl connection.
+        
+Messages contain information about the CVMFS repositories to be created:
 
-    <AAI name>,<iam subject>,<repo-name>,<type>
+<AAI name>,<iam subject>,<repo-name>,<type>
 
-         where type=P for personal repo, type=G for group repo.
+where type=P for personal repo, type=G for group repo.
 
-         With this information, the application authenticates to Vault via a read_only AppRole, downloads the keys, creates the CVMFS repositories, connect to RGW and create the topic, connect to RabbitMQ and create the corresponding queue. 
-
-    read-only capabilities are required to download the CVMFS repository keys. 
+With this information, the application authenticates to Vault via a read_only AppRole, downloads the keys, creates the CVMFS repositories, connect to RGW and create the topic, connect to RabbitMQ and create the corresponding queue. 
 
 
 

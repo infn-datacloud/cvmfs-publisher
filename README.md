@@ -16,18 +16,11 @@ The application authenticates to Vault via a read_only AppRole, downloads the ke
 ![ScreenShot](images/Cephrwg-rabbitmq-publisher.png)
 
 
-The user populates his repository by accessing his own S3 bucket via the web application https://s3webui.cloud.infn.it/ and upload the software he wants to distribute in the cvmfs bucket. 
-
-User can also populate the repo using the standard CVMFS mechanisms by a CVMFS publisher (for advanced users).
+The user populates his repository by accessing his own S3 bucket via the web application https://s3webui.cloud.infn.it/ (or using the standard CVMFS mechanisms by a CVMFS publisher) and upload the software he wants to distribute in the cvmfs bucket. 
 
 As soon as the user uploads software to the bucket, the system is notified and start synchronizing the contents of the bucket with the corresponding CVMFS repository.
 
-CVMFS publisher gets notified by RabbitMQ when the content of the cvmfs/ area of the S3 buckets changes, and starts the synchronization with the CVMFS repository.
-
-Using the cvmfs_repo_consumers.py script, it establishes a secure connection with RabbitMQ to consume messages stored in the users queues.
-
-The cvmfs_repo_sync.py script syncronizes the content of the /data/cvmfs/<reponame> folders with the corresponding CVMFS repositories.
-
+CVMFS publisher gets notified by RabbitMQ when the content of the cvmfs/ area of the S3 buckets changes running the [cvmfs_repo_consumers.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/cvmfs_repo_consumers.py?ref_type=heads) script, and starts the synchronization of the content of the /data/cvmfs/<reponame> folders with the corresponding CVMFS repositories with the [cvmfs_repo_sync.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/cvmfs_repo_sync.py?ref_type=heads) script 
 
 # Documentations
 

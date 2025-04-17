@@ -53,10 +53,6 @@ V_URL                       = data["vault"]['vault_url']
 V_ROLEID                    = data["vault"]['role_id']
 V_SECRETID                  = data["vault"]['secret_id']
 
-WDIR_PATH   = "/home/ubuntu/consumers/"
-SSL_CA_CERT = WDIR_PATH + CA_CERT
-SSL_CL_CERT = WDIR_PATH + CLIENT_CERT
-SSL_CL_KEY  = WDIR_PATH + CLIENT_KEY
 
 
 def create_topic(repo):

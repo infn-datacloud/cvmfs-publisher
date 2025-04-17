@@ -59,7 +59,6 @@ def create_topic(repo):
 
     repo = repo.split('.')[0]
     try:
-
         sns_client = boto3.client('sns',
         aws_access_key_id = RGW_ACCESS_KEY,
         aws_secret_access_key = RGW_SECRET_KEY,

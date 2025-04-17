@@ -41,14 +41,11 @@ SECRET_KEY                  = data["ceph-rgw"]['secret_key']
 ROLE                        = data["ceph-rgw"]['role']
 ENDPOINT                    = data["ceph-rgw"]['url']
 REGION                      = data["ceph-rgw"]['region']
-ca_cert                     = data["ssl"]['ca_cert']
-client_cert                 = data["ssl"]['client_cert']
-client_key                  = data["ssl"]['client_key']
+CA_CERT                     = data["ssl"]['ca_cert']
+CLIENT_CERT                 = data["ssl"]['client_cert']
+CLIENT_KEY                  = data["ssl"]['client_key']
 
-WDIR_PATH   = "/home/ubuntu/consumers/"
-SSL_CA_CERT = WDIR_PATH + ca_cert
-SSL_CL_CERT = WDIR_PATH + client_cert
-SSL_CL_KEY  = WDIR_PATH + client_key
+
 
 PREFETCH_COUNT=10
 CHECK_INTERVAL= 1800 # check queues every 30 minutes
@@ -58,8 +55,8 @@ RABBITMQ_EXCLUDED_QUEUES=['cvmfs_reply','cvmfs','publisher','trace']
 
 # SSL context for secure connection
 def create_ssl_context():
-    context = ssl.create_default_context(cafile=SSL_CA_CERT)
-    context.load_cert_chain(certfile=SSL_CL_CERT, keyfile=SSL_CL_KEY)
+    context = ssl.create_default_context(cafile=CA_CERT)
+    context.load_cert_chain(certfile=CLIENT_CERT, keyfile=CLIENT_KEY)
     context.check_hostname = False        # required check on Linux
     context.verify_mode = ssl.CERT_NONE   # required check on Linux
     return context

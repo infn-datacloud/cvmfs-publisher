@@ -22,6 +22,10 @@ As soon as the user uploads software to the bucket, the system is notified and s
 
 CVMFS publisher gets notified by RabbitMQ when the content of the cvmfs/ area of the S3 buckets changes running the [cvmfs_repo_consumers.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/cvmfs_repo_consumers.py?ref_type=heads) script, and starts the synchronization of the content of the /data/cvmfs/<reponame> folders with the corresponding CVMFS repositories with the [cvmfs_repo_sync.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/cvmfs_repo_sync.py?ref_type=heads) script 
 
+
+
+
+
 # Documentations
 
 [User guide](https://confluence.infn.it/display/INFNCLOUD/Software+Management+user+guide)

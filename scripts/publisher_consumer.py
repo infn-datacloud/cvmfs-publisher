@@ -85,27 +85,6 @@ def create_topic(repo):
     return True
 
 
-def delete_topic(s,repo):
-
-    repo = repo.split('.')[0]
-    try:
-        sns_client = boto3.client('sns',
-        aws_access_key_id = RGW_ACCESS_KEY,
-        aws_secret_access_key = RGW_SECRET_KEY,
-        endpoint_url= RGW_ENDPOINT,
-        region_name=RGW_REGION,
-        )
-        arn = f'arn:aws:sns:bbrgwzg::{repo}'
-        resp = sns_client.delete_topic(TopicArn=arn)    
-        print(f'Topic deleted for repo {repo}')
-        logging.info(f'Topic deleted for repo {repo}')
-                                 
-    except Exception as ex:
-        print(f'An unexpected error occurred: {ex}')
-        logging.error(f'An unexpected error occurred: {ex}')
-    
-    return True
-
 
 def create_queue(channel, repo):
     

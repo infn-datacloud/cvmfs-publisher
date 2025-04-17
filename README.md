@@ -5,15 +5,12 @@
 ![ScreenShot](images/Publisher-vault-interaction.png)
 
 CVMFS publisher is notified when new CVMFS repositories are created to retrieve the repository keys from Vault and make the repository accessible to the publisher via the gateway.
-
 It is implemented using the [publisher_consumer.py](https://baltig.infn.it/infn-cloud/wp6/cvmfs-publisher/-/blob/main/scripts/publisher_consumer.py?ref_type=heads) script. 
-
 It establishes a secure connection with RabbitMQ to digest messages stored in the publisher queue.
-In order to interact with RabbitMQ, the publisher RabbitMQ user with limited privileges (tag = impersonator) is used, with certificates required for the ssl connection.
         
 Messages contain information about the CVMFS repositories to be created:
 
-<AAI name>,<iam subject>,<repo-name>,<type>
+# <AAI name>,<iam subject>,<repo-name>,<type>
 
 where type=P for personal repo, type=G for group repo.
 

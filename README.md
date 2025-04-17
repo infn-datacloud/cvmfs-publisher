@@ -1,6 +1,8 @@
 
 
+# CVMFS publisher - RabbitMQ - Ceph RGW interaction
 
+![ScreenShot](images/Publisher-vault-interaction.png)
 
 
 

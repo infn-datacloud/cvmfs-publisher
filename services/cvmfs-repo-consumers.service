@@ -4,6 +4,8 @@ Description=CVMFS queues consumers service
 [Service]
 WorkingDirectory=/home/ubuntu/consumers/
 ExecStart=/usr/bin/python3 -u /home/ubuntu/consumers/cvmfs_repo_consumers.py
+StandardOutput=append:/var/log/publisher/cvmfs-repo-consumers.service.log
+StandardError=append:/var/log/publisher/cvmfs-repo-consumers.service.log
 Restart=always
 RestartSec=3
 SyslogIdentifier=cvmfs-repo-consumers

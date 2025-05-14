@@ -72,7 +72,7 @@ def setup_logging():
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_file = f"/var/log/publisher/publisher_consumer-{date_stamp}.log"
     logging.basicConfig(
-            level=logging.INFO,                    # Logging level: INFO, ERROR, DEBUG
+            level=logging.INFO,                    
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[TimedRotatingFileHandler(log_file, when='D', interval=7)]
     )
@@ -207,7 +207,6 @@ def create_repo_publisher(repo_name):
     -k /tmp/{repo_name}_keys -o `whoami` {repo_name}'
     try:
        subprocess.run(cmd, shell=True, capture_output=True, check=True)
-       print(f'CVMFS repository {repo_name} successfully created.')
        logging.info(f'CVMFS repository {repo_name} successfully created.')
        shutil.rmtree(f'/tmp/{repo_name}_keys/')
        return True
@@ -217,7 +216,6 @@ def create_repo_publisher(repo_name):
         stderr_output = e.stderr.decode()
         # Case repo already exists 
         if "already exists" in stderr_output:
-            print("CVMFS repo not created.")
             logging.info("CVMFS repo not created.")
             shutil.rmtree(f'/tmp/{repo_name}_keys/')
             return True
@@ -238,21 +236,17 @@ def callback(ch, method, properties, body):
     if repo_name is not False:
         res = create_repo_publisher(repo_name)
         if res is not True:
-            print(f'Cannot create CVMFS repo in publisher: {res}. Message NOT acknowledged.')
             logging.warning(f'Cannot create CVMFS repo in publisher: {res}. Message NOT acknowledged.')
         else:
             create_t=create_topic(repo_name)
             if create_t is not True:
-                print(f'Cannot create topic for the CVMFS repo in publisher: {create_t}. Message NOT acknowledged.')
                 logging.warning(f'Cannot create topic for the CVMFS repo in publisher: {create_t}. Message NOT acknowledged.')
             else:
                 create_q=create_queue(ch, repo_name)
                 if create_q is not True:
-                    print(f'Cannot create queue for the CVMFS repo in publisher: {create_q}. Message NOT acknowledged. ')
                     logging.warning(f'Cannot create queue for the CVMFS repo in publisher: {create_q}. Message NOT acknowledged.')
                 else:
                     ch.basic_ack(delivery_tag=method.delivery_tag)
-
 
 
 def main():
@@ -267,9 +261,7 @@ def main():
                                                                            port=RMQ_PORT,
                                                                            credentials=credentials,
                                                                            ssl_options=pika.SSLOptions(
-                                                                               context, server_hostname=RMQ_HOSTNAME)
-                                                                           )
-                                                                           )
+                                                                               context, server_hostname=RMQ_HOSTNAME)))
             logging.info('Connected to RabbitMQ, starting consuming publisher queue...')
             channel = connection.channel()
             channel.queue_declare(queue=RMQ_PUBLISHER_QUEUE, durable=True, arguments={"x-queue-type": "quorum"})

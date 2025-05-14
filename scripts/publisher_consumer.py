@@ -27,6 +27,7 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 import os,sys
+import socket
 
 
 with open("parameters.json") as json_data_file:
@@ -46,17 +47,39 @@ RGW_ACCESS_KEY              = data["ceph-rgw"]['access_key']
 RGW_SECRET_KEY              = data["ceph-rgw"]['secret_key']
 RGW_ENDPOINT                = data["ceph-rgw"]['url']
 RGW_REGION                  = data["ceph-rgw"]['region']
-CA_CERT                     = data["ssl"]['ca_cert']
-CLIENT_CERT                 = data["ssl"]['client_cert']
-CLIENT_KEY                  = data["ssl"]['client_key']
+SSL_CA_CERT                 = data["ssl"]['ca_cert']
+SSL_CLIENT_CERT             = data["ssl"]['client_cert']
+SSL_CLIENT_KEY              = data["ssl"]['client_key']
 V_URL                       = data["vault"]['vault_url']
 V_ROLEID                    = data["vault"]['role_id']
 V_SECRETID                  = data["vault"]['secret_id']
+ZBX_SERVER                  = data["zabbix"]['server']
+ZBX_ITEM_KEY                = data["zabbix"]['item_key3']
+
+
+# Alerts sent to Zabbix server
+def send_to_zabbix(message):
+    HOSTNAME =socket.gethostname()
+    cmd = f'zabbix_sender -z {ZBX_SERVER} -s {HOSTNAME} -k {ZBX_ITEM_KEY} -o "{message}"'
+    try:
+        subprocess.run(cmd, shell=True)
+    except Exception as e:
+        logging.error(f"Zabbix notification failed: {e}")
+
+
+# Generate log file with current date and weekly rotation
+def setup_logging():
+    date_stamp = datetime.now().strftime("%Y-%m-%d")
+    log_file = f"/var/log/publisher/publisher_consumer-{date_stamp}.log"
+    logging.basicConfig(
+            level=logging.INFO,                    # Logging level: INFO, ERROR, DEBUG
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[TimedRotatingFileHandler(log_file, when='D', interval=7)]
+    )
 
 
 
 def create_topic(repo):
-
     repo = repo.split('.')[0]
     try:
         sns_client = boto3.client('sns',
@@ -72,37 +95,55 @@ def create_topic(repo):
         topic_arn = resp["TopicArn"]
         print(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
         logging.info(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
-
     except Exception as ex:
-        print(f'An unexpected error occurred: {ex}')
-        logging.error(f'An unexpected error occurred: {ex}')
-
+        error_msg=f'An unexpected error occurred: {ex}'
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
     return True
 
 
+def delete_topic(s,repo):
+    repo = repo.split('.')[0]
+    try:
+        sns_client = boto3.client('sns',
+        aws_access_key_id = RGW_ACCESS_KEY,
+        aws_secret_access_key = RGW_SECRET_KEY,
+        endpoint_url= RGW_ENDPOINT,
+        region_name=RGW_REGION,
+        )
+        arn = f'arn:aws:sns:bbrgwzg::{repo}'
+        resp = sns_client.delete_topic(TopicArn=arn)    
+        print(f'Topic deleted for repo {repo}')
+        logging.info(f'Topic deleted for repo {repo}')
+    except Exception as ex:
+        error_msg=f'An unexpected error occurred: {ex}'
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+    return True
+
 
 def create_queue(channel, repo):
-    
     repo = repo.split('.')[0]
     try:
         channel.queue_declare(queue=repo, durable=True, arguments={"x-queue-type": "quorum"}, exclusive=False)
         channel.queue_bind(exchange = RMQ_EXCHANGE, queue = repo, routing_key= repo)
-
         print(f'Queue {repo} created for repo {repo}.infn.it')
         logging.info(f'Queue {repo} created for repo {repo}.infn.it')
         return True
-
     except pika.exceptions.ConnectionClosed as ex:
-        print(f'RabbitMQ client unreachable or dead: {ex}')
-        logging.warning(f'RabbitMQ client unreachable or dead: {ex}')
+        error_msg=f'RabbitMQ client unreachable or dead: {ex}'
+        logging.warning(error_msg)
+        send_to_zabbix(error_msg)
         return False
     except pika.exceptions.StreamLostError as ex:
-        print(f'RabbitMQ lost connection: {ex}')
-        logging.warning(f'RabbitMQ lost connection: {ex}')
+        error_msg=f'RabbitMQ lost connection: {ex}'
+        logging.warning(error_msg)
+        send_to_zabbix(error_msg)
         return False
     except Exception as ex:
-        print(f'An unexpected error occurred: {ex}')
-        logging.warning(f'An unexpected error occurred: {ex}')
+        error_msg=f'An unexpected error occurred: {ex}'
+        logging.warning(error_msg)
+        send_to_zabbix(error_msg)
         return False
 
 
@@ -113,48 +154,42 @@ def vault_login_approle(client):
         login_response = client.auth.approle.login(role_id=V_ROLEID,secret_id=V_SECRETID)
         print("Login to Vault server successful.")
         logging.info("Login to Vault server successful.")
-
     except hvac.exceptions.InvalidRequest as e:
-        print("Invalid request error:", e)
-        logging.info("Invalid request error:", e)
-
+        error_msg=f'Invalid request error: {e}'
+        logging.info(error_msg)
+        send_to_zabbix(error_msg)
     except hvac.exceptions.Forbidden as e:
-        print("Access forbidden:", e)
-        logging.info("Access forbidden:", e)
-
+        error_msg=f'Access forbidden: {e}'
+        logging.info(error_msg)
+        send_to_zabbix(error_msg)
     except hvac.exceptions.VaultError as e:
-        # Generic Vault-related error
-        print("Vault error occurred:", e)
-        logging.info("Vault error occurred:", e)
-
+        error_msg=f'Vault error occurred: {e}'
+        logging.info(error_msg)
+        send_to_zabbix(error_msg)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        logging.info(f"An unexpected error occurred: {e}")
+        error_msg=f'An unexpected error occurred: {e}'
+        logging.info(error_msg)
+        send_to_zabbix(error_msg)
 
 
-'''Retrive CVMFS repo keys from vault '''
+# Retrive CVMFS repo keys from vault
 def get_repo_keys(msg):
-    # delcorso,34158350-c746-4918-82ab-9004dd03f95b,repo32.infn.it,G
     subject = msg.split(',')[1]
     repository_name=msg.split(',')[2]
     type_repo = msg.split(',')[3]
-
     try:
         client = hvac.Client(V_URL)
         vault_login_approle(client)
-        
         print("VAULT client authenticated:",client.is_authenticated())
         logging.info(f"VAULT client authenticated: {client.is_authenticated()}.")
         print('Vault initialize status: %s' % client.sys.is_initialized())
         logging.info(f"Vault initialize status: {client.sys.is_initialized()}. ")
         print("Vault is sealed:", client.sys.is_sealed())
         logging.info(f"Vault is sealed: {client.sys.is_sealed()}.")
-        
         if type_repo == 'P':    
             PATH = "secrets/data/"+subject+"/cvmfs_keys/"+repository_name+"/"
         else:
             PATH = "secrets/data/groups/"+repository_name.split('.')[0]+"/cvmfs_keys/"+repository_name+"/"
-        
         read_response = client.read(path=PATH)
         p = Path('/tmp/') / f'{repository_name}_keys'
         p.mkdir(exist_ok=True)
@@ -164,33 +199,28 @@ def get_repo_keys(msg):
             f.write(read_response['data']['data']['gatewayKey'])
         with (p / f'{repository_name}.pub').open('w') as f:
             f.write(read_response['data']['data']['publicKey'])
-
-    except Exception as ex:
-        print(f'{ex}')
-        logging.warning(f'{ex}')
-        return False
-    
+    except Exception as e:
+        error_msg=f'{e}'
+        logging.warning(error_msg)
+        send_to_zabbix(error_msg)
     return repository_name
 
 
-'''Make a CVMFS repository writable from publisher via gateway'''
+# Make a CVMFS repository writable from publisher via gateway
 def create_repo_publisher(repo_name):
     
     cmd = f'sudo cvmfs_server mkfs -w {CVMFS_SERVER_URL}{repo_name} \
     -u gw,/srv/cvmfs/{repo_name}/data/txn,{CVMFS_UP_STORAGE} \
     -k /tmp/{repo_name}_keys -o `whoami` {repo_name}'
     try:
-
        subprocess.run(cmd, shell=True, capture_output=True, check=True)
-       
        print(f'CVMFS repository {repo_name} successfully created.')
        logging.info(f'CVMFS repository {repo_name} successfully created.')
        shutil.rmtree(f'/tmp/{repo_name}_keys/')
        return True
-   
     except subprocess.CalledProcessError as e:
-        print(f"{e.stderr.decode()}")
-        logging.info(f"{e.stderr.decode()}")
+        error_msg=f'{e.stderr.decode()}'
+        logging.info(error_msg)
         stderr_output = e.stderr.decode()
         # Case repo already exists 
         if "already exists" in stderr_output:
@@ -199,17 +229,17 @@ def create_repo_publisher(repo_name):
             shutil.rmtree(f'/tmp/{repo_name}_keys/')
             return True
         else:
+            send_to_zabbix(error_msg)
             return False
-
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        logging.error(f"Unexpected error: {e}")
+        error_msg=f"Unexpected error: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
         return False
 
-'''Function called whenever a message from publisher queue is received'''
-# sent from the INFN dashboard or via CLI from the cvmfs_repo_agent.py script on the stratum0 when a user requires a new cvmfs personal/group repository.
-def callback(ch, method, properties, body):
-    
+
+# Function called whenever a message from publisher queue is received
+def callback(ch, method, properties, body):    
     message=body.decode("utf-8")
     print(f' [*] {message} ')               #delcorso,34158350-c746-4918-82ab-9004dd03f95b,repo32.infn.it,G
     repo_name = get_repo_keys(message)
@@ -231,24 +261,13 @@ def callback(ch, method, properties, body):
                 else:
                     ch.basic_ack(delivery_tag=method.delivery_tag)
 
-def log_generation():
-    # Generate log file with current date
-    date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"/var/log/publisher/publisher_consumer-{date_stamp}.log"
-    logging.basicConfig(
-         level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
-         filename=log_filename,                 # Specify log file name
-         filemode='a',                          # Append to the file if it exists
-         format='%(asctime)s - %(levelname)s - %(message)s'
-    )
 
 
 def main():
-        
-        log_generation()
+        setup_logging()
         try: 
-            context = ssl.create_default_context(cafile=CA_CERT)
-            context.load_cert_chain(certfile=CLIENT_CERT, keyfile=CLIENT_KEY)
+            context = ssl.create_default_context(cafile=SSL_CA_CERT)
+            context.load_cert_chain(certfile=SSL_CLIENT_CERT, keyfile=SSL_CLIENT_KEY)
             
             # Establish connection with RabbitMQ server
             credentials = pika.PlainCredentials(RMQ_RGW_USER,RMQ_RGW_PASSWORD)
@@ -276,28 +295,30 @@ def main():
             logging.info(' [*] Waiting for messages. To exit press CTRL+C')
             channel.start_consuming()
 
-        except pika.exceptions.ConnectionClosed as ex:
-            logging.warning(f'RabbitMQ client unreachable or dead: {ex}')
-            print(f'RabbitMQ client unreachable or dead: {ex}')
-        except pika.exceptions.StreamLostError as ex:
-            logging.warning(f'RabbitMQ lost connection: {ex}')
-            print(f'RabbitMQ lost connection: {ex}')
-        except Exception as ex:
-            logging.warning(f'Strange error: {ex}')
-            print(f'Strange error: {ex}')
+        except pika.exceptions.ConnectionClosed as e:
+            error_msg=f'RabbitMQ client unreachable or dead: {e}'
+            logging.warning(error_msg)
+            send_to_zabbix(error_msg)
+        except pika.exceptions.StreamLostError as e:
+            error_msg=f'RabbitMQ lost connection: {e}'
+            logging.warning(error_msg)
+            send_to_zabbix(error_msg)
+        except Exception as e:
+            error_msg=f"Error in {RMQ_PUBLISHER_QUEUE} queue: {e}"
+            logging.warning(error_msg)
+            send_to_zabbix(error_msg)
 
 
-
-if __name__ == '__main__' :
-   
-      try:
+if __name__ == "__main__":
+    try:
         main()
-
-      except KeyboardInterrupt:
-        print('Interrupted')
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0) 
-
-    
+    except KeyboardInterrupt:
+        error_msg="Shutdown publisher-consumer.py script via KeyboardInterrupt."
+        logging.info(error_msg)
+        send_to_zabbix(error_msg)
+        sys.exit(0)
+    except Exception as e:
+        error_msg=f"Fatal error in main loop: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        sys.exit(1)

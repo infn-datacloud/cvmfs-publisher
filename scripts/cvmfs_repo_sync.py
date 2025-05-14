@@ -13,19 +13,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Syncronization between /data/cvmfs/reponame folders and the corresponding CVMFS repositories
-
 import os,sys
 import re
 import shutil
 import subprocess
 import time
 import logging
+import requests
+import json
+import socket
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 
 my_cvmfs_path = r"/data/cvmfs"                         # Folder path to monitor
 cvmfs_path    = r"/cvmfs/"                             # CVMFS repo base path
-TIME_CHECK=60                                          # Wait 60 seconds before check again
+TIME_CHECK    = 60                                          # Wait 60 seconds before check again
+
+
+with open("parameters.json") as json_data_file:
+    data = json.load(json_data_file)
+
+ZBX_SERVER                  = data["zabbix"]['server']
+ZBX_ITEM_KEY                = data["zabbix"]['item_key2']
+
+
+# Alerts sent to Zabbix server
+def send_to_zabbix(message):
+    HOSTNAME =socket.gethostname()
+    cmd = f'zabbix_sender -z {ZBX_SERVER} -s {HOSTNAME} -k {ZBX_ITEM_KEY} -o "{message}"'
+    try:
+        subprocess.run(cmd, shell=True)
+    except Exception as e:
+        logging.error(f"Zabbix notification failed: {e}")
+
+
+def setup_logging():
+    date_stamp = datetime.now().strftime("%Y-%m-%d")
+    log_file = f"/var/log/publisher/cvmfs_repo_sync-{date_stamp}.log"
+    logging.basicConfig(
+            level=logging.INFO,                    # Logging level: INFO, ERROR, DEBUG
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[TimedRotatingFileHandler(log_file, when='D', interval=7)]
+    )
+
 
 # This function deletes temporary files copied in the CVMFS repositories. Their filename end with a period followed by 8 characters
 def delete_temp_files(directory):
@@ -40,18 +70,45 @@ def delete_temp_files(directory):
         if os.path.isfile(file_path) and pattern.match(filename):
             try:
                 # Delete the file
+                logging.info(f"Deleting temparary file {filename} ...")
                 print(f"Deleting temparary file {filename} ...")
                 os.remove(file_path)
+                logging.info(f"{filename} successfully deleted")
                 print(f"{filename} successfully deleted")
             except Exception as e:
-                print(f"Error deleting {filename}: {e}")
+                error_msg=f"Error deleting {filename}: {e}"
+                print(error_msg)
+                logging.error(error_msg)
+                send_to_zabbix(error_msg)
+
+def cvmfs_transaction(cvmfs_repo):
+    try:
+        resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
+        resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
+        if not "transaction" in resp1.stdout.decode('utf-8'):
+            res=subprocess.run(["cvmfs_server", "transaction", cvmfs_repo], capture_output=True,text=True, check=True)
+            logging.info(f"{res.stdout}")
+            if res.stderr:
+                logging.error(f"{res.stderr}")
+    
+    except subprocess.CalledProcessError as e:
+        error_msg=f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction..."
+        print(error_msg)
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        # CVMFS ABORT in case of error
+        res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
+        logging.info(f"{res.stdout}")
+        if res.stderr:
+            error_msg=f"CVMFS abort error in cvmfs_repo_sync() function: {res.stderr}"
+            print(error_msg)
+            logging.error(error_msg)
+            send_to_zabbix(error_msg)
 
 
 
-def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
-
+def cvmfs_repo_sync():                                  # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
     for cvmfs_repo in os.listdir(my_cvmfs_path):        # cvmfs_repo=repo01.infn.it    
-        
         folder_path  = os.path.join(my_cvmfs_path, cvmfs_repo)
         cvmfs_folder = os.path.join(cvmfs_path, cvmfs_repo)
         
@@ -65,17 +122,8 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                 logging.info(f"Syncronization process for CVMFS repository {cvmfs_repo} started.")
                 
                 try:
-                    # CVMFS TRANSACTION
-                    # sudo cvmfs_server list | grep repo must contain the string "in transaction" if the repo is yet in a transaction
-                    resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
-                    resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
-                    if not "transaction" in resp1.stdout.decode('utf-8'):
-                       res=subprocess.run(["cvmfs_server", "transaction", cvmfs_repo], capture_output=True,text=True, check=True)
-
-                       logging.info(f"{res.stdout}")
-                       if res.stderr:
-                          logging.error(f"{res.stderr}")
-
+                    cvmfs_transaction(cvmfs_repo)
+                    
                     # Create directory in the repository if it does not exist
                     if not os.path.exists(cvmfs_folder):
                         logging.info(f"Creating {cvmfs_folder} directory.")
@@ -114,17 +162,28 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                     logging.info(f"Syncronization process for the CVMFS repository {cvmfs_repo} successfully completed.")
 
                 except subprocess.CalledProcessError as e:
-                    print(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
-                    logging.info(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
+                    error_msg=f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction..."
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
                     # CVMFS ABORT in case of error
                     res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
                     logging.info(f"{res.stdout}")
                     if res.stderr:
-                       logging.error(f"{res.stderr}")
+                       error_msg=f"CVMFS abort error in cvmfs_repo_sync() function: {res.stderr}"
+                       logging.error(error_msg)
+                       send_to_zabbix(error_msg)
 
                 except Exception as e:
-                    print(f"Unexpected error: {e}")
-                    logging.error(f"Unexpected error: {e}")
+                    error_msg=f"Unexpected error in cvmfs_repo_sync() function: {e}"
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
+                    # CVMFS ABORT in case of error
+                    res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
+                    logging.info(f"{res.stdout}")
+                    if res.stderr:
+                       error_msg=f"CVMFS abort error in cvmfs_repo_sync() function: {res.stderr}"
+                       logging.error(error_msg)
+                       send_to_zabbix(error_msg)
            
 
             # CASE files to DELETE
@@ -141,6 +200,7 @@ def cvmfs_repo_sync(my_cvmfs_path, cvmfs_path):         # my_cvmfs_path=/data/cv
                    tar_files = [f for f in os.listdir(to_extract_path) if os.path.isfile(os.path.join(to_extract_path, f))]
                    cvmfs_extract(cvmfs_repo,tar_files)  
 
+
 # This function deletes files written in the file to_delete_file and if the operation is successfull, remove the line in the file
 def delete_cvmfs_files(to_delete_file,cvmfs_repo):
          
@@ -150,18 +210,10 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
          remaining_files = []       
          
          try:
-            # Start a CVMFS transaction if the repo is not yet in a transaction.
-            resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
-            resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
-            if not "transaction" in resp1.stdout.decode('utf-8'):
-                    res=subprocess.run(["cvmfs_server", "transaction", cvmfs_repo], capture_output=True,text=True, check=True)
-                    logging.info(f"{res.stdout}")
-                    if res.stderr:
-                          logging.error(f"{res.stderr}")
-
+            cvmfs_transaction(cvmfs_repo)
             for file in files:
-             file_path = file.strip()                                               # file_path=/cvmfs/repo01.infn.it/oidc-agent_5.1.0.tar     
-             # CASE deleting .tar file 
+             file_path = file.strip()     
+             # CASE deleting .tar file                                              # file_path=/cvmfs/repo01.infn.it/oidc-agent_5.1.0.tar
              if file_path.endswith('.tar'):
                 try:
                    # extract the folder name
@@ -172,21 +224,21 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                    print("Target dir:", folder_path)
                    if os.path.exists(folder_path) and os.path.isdir(folder_path):
                       # The entire folder in /cvmfs/reponame/software/ is to be deleted, not the software dir
-                      shutil.rmtree(folder_path)                                  
+                      shutil.rmtree(folder_path)                                  # valuatare cvmfs_server ingest -d
                       print(f"Deleted: {folder_path}.")
                       logging.info(f"Deleted: {folder_path}")
                    else:
-                      # Case file not found is not considered as an error, it is only logged in the log file 
-                      print(f"Folder {folder_path} not found, nothing to delete.")
-                      logging.info(f"Folder {folder_path} not found, nothing to delete.")
+                      # Case file not found is not considered as an error, it is only logged in the log file
+                      logging.info(f"Folder {folder_path} or filename not found, nothing to delete.")
 
                 except Exception as e:
-                   print(f"Failed to delete {file_path}: {e}")
-                   logging.info(f"Failed to delete {file_path}: {e}")
+                   error_msg=f"Unexpected error in delete_cvmfs_files function: {e}"
+                   logging.error(error_msg)
+                   send_to_zabbix(error_msg)
                    remaining_files.append(file)  # Keep the line if deletion fails
 
              else:  
-             # CASE deleting other types of files
+             # CASE deleting other types of files, e.g. file_path=/cvmfs/repo01.infn.it/NETCDC01
                try:
                  if os.path.exists(file_path):
                    os.remove(file_path)
@@ -198,20 +250,22 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                    logging.info(f"File not found, skipping: {file_path}")
 
                except Exception as e:
-                print(f"Failed to delete {file_path}: {e}")
-                logging.info(f"Failed to delete {file_path}: {e}")
-                remaining_files.append(file)  # Keep the line if deletion fails
+                   error_msg=f"Unexpected error in delete_cvmfs_files function: {e}"
+                   logging.error(error_msg)
+                   send_to_zabbix(error_msg)
+                   remaining_files.append(file)  # Keep the line if deletion fails
         
 
             # Execute CVMFS publish
             res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True,text=True,check=True)
             logging.info(f"{res.stdout}")
             if res.stderr:
-                        print(f"CVMFS publish for {cvmfs_repo} error: {res.stderr}")
-                        logging.error(f"CVMFS publish for {cvmfs_repo} error: {res.stderr}")
+                error_msg=f"CVMFS publish for {cvmfs_repo} error: {res.stderr}"     
+                logging.error(error_msg)
+                send_to_zabbix(error_msg)
             else:
-                        print(f"CVMFS publish for {cvmfs_repo} successfully completed.")
-                        logging.info(f"CVMFS publish for {cvmfs_repo} successfully completed.")
+                print(f"CVMFS publish for {cvmfs_repo} successfully completed.")
+                logging.info(f"CVMFS publish for {cvmfs_repo} successfully completed.")
 
 
             # Rewrite the file with remaining paths
@@ -224,18 +278,22 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
             logging.info(f"DELETE file operation for {cvmfs_repo} successfully completed.")
 
          except subprocess.CalledProcessError as e:
-                    print(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
-                    logging.info(f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction.")
+                    error_msg=f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction."
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
                     # Transaction abort in case of error
                     res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True,text=True,check=False)
                     print(f"{res.stdout}")
                     logging.info(f"{res.stdout}")
                     if res.stderr:
-                       logging.error(f"{res.stderr}")
+                       error_msg=f"CVMFS abort error in delete_cvmfs_files function: {res.stderr}"
+                       logging.error(error_msg)
+                       send_to_zabbix(error_msg)
 
          except Exception as e:
-                    print(f"Unexpected error: {e}")
-                    logging.error(f"Unexpected error: {e}")
+                    error_msg=f"Unexpected error: {e}"
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
 
 
 
@@ -250,22 +308,19 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                 logging.info(f"Extracting {tar_file} in {cvmfs_repo} started.")
     
                 try:
-                    # sudo cvmfs_server list | grep repo deve contenere la stringa "in transaction"
+                    # If the repo is in a transaction, it must be closed before ingestion . 
                     resp=subprocess.run(["sudo", "cvmfs_server", "list"], check=True, capture_output=True)
                     resp1 = subprocess.run(["grep", cvmfs_repo], input=resp.stdout, capture_output=True)
-                    # If the repo is in a transaction, close the transaction with publish before doing the ingest operation. 
                     if "transaction" in resp1.stdout.decode('utf-8'):
                        res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True, text=True, check=True)
-
                        logging.info(f"{res.stdout}")
                        if res.stderr:
                           logging.error(f"{res.stderr}")
                     
                     # CVMFS ingest
-                    my_tar_file= my_cvmfs_repo_extract_path + tar_file
-                    # my_tar_file= cvmfs/repo21.infn.it/to_extract/oidc-agent.5.1.0.tar
-                    # questo script DEVE essere eseguito nella cartella /home/ubuntu/my_connections
+                    my_tar_file= my_cvmfs_repo_extract_path + tar_file          # my_tar_file= cvmfs/repo21.infn.it/to_extract/oidc-agent.5.1.0.tar
                     subprocess.run(["cvmfs_server", "ingest", "-t", my_tar_file, "-b", "software/" , cvmfs_repo], capture_output=True, text=True, check=True)
+                    
                     # Delete .tar files
                     os.remove(os.path.join(my_cvmfs_repo_extract_path, tar_file))
                     
@@ -274,36 +329,30 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                     logging.info(f"CVMFS server ingest process for {tar_file} in {cvmfs_repo} successfully completed.")
 
                 except subprocess.CalledProcessError as e:
-                    print(f"CVMFS server ingest ERROR for {tar_file} in {cvmfs_repo}: {e}. Aborting transaction...")
-                    logging.info(f"CVMFS server ingest ERROR for {tar_file} in {cvmfs_repo}: {e}. Aborting transaction ...")
+                    error_msg=f"CVMFS server ingest ERROR for {tar_file} in {cvmfs_repo}: {e}. Aborting transaction..."
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
                     # Transaction abort in case of error
                     res=subprocess.run(["cvmfs_server", "abort", "-f", cvmfs_repo], capture_output=True, text=True, check=False)
                     logging.info(f"{res.stdout}")
                     if res.stderr:
-                       logging.error(f"{res.stderr}")
+                       error_msg=f"CVMFS abort error in cvmfs_extract function: {res.stderr}"
+                       logging.error(error_msg)
+                       send_to_zabbix(error_msg)
 
                 except Exception as e:
-                    print(f"Unexpected error: {e}")
-                    logging.error(f"Unexpected error: {e}")
+                    error_msg=f"Unexpected error in cvmfs_extract function: {e}"
+                    logging.error(error_msg)
+                    send_to_zabbix(error_msg)
 
 
-def log_generation():
-    # Generate log file with current date
-    date_stamp = datetime.now().strftime("%Y-%m-%d")
-    log_filename = f"/var/log/publisher/cvmfs_repo_sync-{date_stamp}.log"
-    logging.basicConfig(
-     level=logging.INFO,                    # Set the logging level: INFO, ERROR, DEBUG
-     filename=log_filename,                 # Specify log file name
-     filemode='a',                          # Append to the file if it exists
-     format='%(asctime)s - %(levelname)s - %(message)s'
-    )
 
 
 def main():
 
-    log_generation()
+    setup_logging()
     while True:
-        cvmfs_repo_sync(my_cvmfs_path, cvmfs_path)
+        cvmfs_repo_sync()
         time.sleep(TIME_CHECK)   
 
 
@@ -314,9 +363,13 @@ if __name__ == "__main__":
         main()
 
       except KeyboardInterrupt:
-        print('Interrupted')
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
+        error_msg="Shutdown cvmfs-repo-sync.py script via KeyboardInterrupt."  
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        sys.exit(0)
 
+      except Exception as e:
+        error_msg=f"Fatal error in main loop: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        sys.exit(1)

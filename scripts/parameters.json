@@ -10,16 +10,16 @@
         "port": 5671,
 	"url": "https://192.135.24.151:15671/",
         "admin_user": "rabbitmq",
-        "admin_password": "r@BBitt2024",
+        "admin_password": "XXXXXXXXXXXXXXXX",
 	"rgw_user": "notification",
-	"rgw_password": "Topic01",
+	"rgw_password": "XXXXXXXXXXXXXXXX",
 	"exchange": "notification",
 	"publisher_queue":"publisher",
 	"excluded_queues":["cvmfs_reply", "cvmfs", "publisher", "trace"]
         },
     "ceph-rgw":{
-        "access_key": "L9TICJ0KDNA9GN55WNXY",
-        "secret_key": "AOGF0MKTVyxVmAB5BABzzXCsO3oTtXpnTMSDBKFC",
+        "access_key": "XXXXXXXXXXXXXXXX",
+        "secret_key": "XXXXXXXXXXXXXXXX",
         "url": "https://rgw.cloud.infn.it/",
         "region": "default",
         "role": "cvmfsAccess"

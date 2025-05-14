@@ -70,7 +70,7 @@ def setup_logging():
     date_stamp = datetime.now().strftime("%Y-%m-%d")
     log_file = f"/var/log/publisher/cvmfs_repo_consumers-{date_stamp}.log"
     logging.basicConfig(
-     level=logging.INFO,                    # Logging level: INFO, ERROR, DEBUG
+     level=logging.INFO,                    
      format='%(asctime)s - %(levelname)s - %(message)s',
      handlers=[TimedRotatingFileHandler(log_file, when='D', interval=7)]
     )
@@ -95,13 +95,11 @@ def s3_client():
         endpoint_url= RGW_ENDPOINT,
         region_name = RGW_REGION
         )
-
     response = sts_client.assume_role(
         RoleArn=f'arn:aws:iam:::role/{RGW_ROLE}',
         RoleSessionName='Bob',
         DurationSeconds=3600
         )
-
     s3 = boto3.client(
         's3',
         aws_access_key_id = response['Credentials']['AccessKeyId'],
@@ -110,37 +108,31 @@ def s3_client():
         endpoint_url=RGW_ENDPOINT,
         region_name=RGW_REGION
         )
-
     return s3
 
 
 def process_messages(message, queue):
     try:
         msg=json.loads(message.decode("utf-8"))
-        bucket = msg['Records'][0]['s3']['bucket']['name']   # bucket=repo01
-        key = msg['Records'][0]['s3']['object']['key']       # key=cvmfs/netCDF-92
-        Operation = msg['Records'][0]['eventName']           # Operation=ObjectCreated:Put ==> download
-        print(f"Operation: {Operation}, Bucket: {bucket}, Key: {key}")
+        bucket = msg['Records'][0]['s3']['bucket']['name']   
+        key = msg['Records'][0]['s3']['object']['key']       
+        Operation = msg['Records'][0]['eventName']           
         logging.info(f"Operation: {Operation}, Bucket: {bucket}, Key: {key}")
-
-        dir_file, filename = os.path.split(key)              # dir_file=cvmfs, filename=netCDF-92        
+        dir_file, filename = os.path.split(key)                      
         full_path=f"/data/cvmfs/{bucket}.infn.it{dir_file[5:]}/{filename}"
-        base_path = os.path.dirname(full_path)               # base_path=/data/cvmfs/repo17.infn.it
+        base_path = os.path.dirname(full_path)               
 
-        # Create the directory for the file path (ignoring the file itself if present), even with delete operation
+        # Create the directory for the file path (ignoring the file itself if present)
         if not os.path.exists(base_path):
                 os.makedirs(base_path)
-                print(f"Directory {base_path} created successfully.")
                 logging.info(f"Directory {base_path} created successfully.")
                 to_delete_dir = os.path.join(base_path, 'to_delete')
                 to_extract_dir= os.path.join(base_path, 'to_extract')
                 if not os.path.exists(to_delete_dir):
                     os.makedirs(to_delete_dir)
-                    print(f"Directory {to_delete_dir} created successfully.")
                     logging.info(f"Directory {to_delete_dir} created successfully.")
                 if not os.path.exists(to_extract_dir):
                     os.makedirs(to_extract_dir)
-                    print(f"Directory {to_extract_dir} created successfully.")
                     logging.info(f"Directory {to_extract_dir} created successfully.")
 
         # UPLOAD files and .tar files
@@ -153,14 +145,12 @@ def process_messages(message, queue):
         else:
              # DELETE operation
              if ("ObjectRemoved" in Operation):
-                # The file to be removed (file_to_be_removed) from CVMFS repo is written in a .txt file (to_delete_file) located under the to_delete folder
                 file_to_be_removed= "/cvmfs/" + bucket + ".infn.it" + dir_file[5:] + "/" + filename
                 to_delete_file = base_path + "/to_delete/" + bucket + "-infn-it.txt"
                 with open(to_delete_file, "a") as f:
                     f.write(file_to_be_removed + "\n")
                 return True
              else:
-                print("Operation not supported.")
                 logging.info("Operation not supported.")
 
     except Exception as e:
@@ -176,21 +166,17 @@ def download_from_s3(bucket, key, Filename):
     s3=s3_client()
     try:        
         s3.download_file(bucket, key, Filename)
-        print(f"Successfully downloaded {key} to {Filename}.")
         logging.info(f"Successfully downloaded {key} to {Filename}.")
         return True
 
     except FileNotFoundError:
-        print(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
         logging.info(f'FileNotFound ERROR. Filename={Filename}, bucket={bucket}, key={key}.')
         # Check if the file exists and if not exists, download it in /tmp
         if not os.path.exists(os.path.dirname(download_path)):
-           print(f"Download path not found. Defaulting to /tmp.")
            logging.info(f"Download path not found. Defaulting to /tmp.")
            download_path = os.path.join('/tmp', os.path.basename(Filename))
            try:
                s3.download_file(bucket, key, download_path)
-               print(f"File {key} downloaded successfully to {download_path}")
                logging.info(f"File {key} downloaded successfully to {download_path}")
                return True
            except ClientError as e:
@@ -200,22 +186,19 @@ def download_from_s3(bucket, key, Filename):
                return False
         else:
             return False
-
     except NoCredentialsError:
         error_msg='Credentials not available.'
         logging.info(error_msg)
         send_to_zabbix(error_msg)
         return False
-
     except PartialCredentialsError:
         error_msg='Incomplete credentials provided.'
         logging.info(error_msg)
         send_to_zabbix(error_msg)
         return False
-
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
-            # No download for an S3 non existing file. This case is not considered an error
+            # This case is not considered an error
             logging.info(f'The object {key} does not exist in the bucket {bucket}. Not downloaded.')
             return True
         else:
@@ -223,7 +206,6 @@ def download_from_s3(bucket, key, Filename):
             logging.info(error_msg)   
             send_to_zabbix(error_msg)
             return False
-
     except BotoCoreError as e:
         error_msg=f'BotoCoreError occurred: {e}'
         logging.info(error_msg)

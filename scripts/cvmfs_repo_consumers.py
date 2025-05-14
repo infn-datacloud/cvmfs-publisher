@@ -76,7 +76,6 @@ def setup_logging():
     )
 
 
-
 # SSL context for secure connection
 def create_ssl_context():
     context = ssl.create_default_context(cafile=SSL_CA_CERT)
@@ -160,8 +159,6 @@ def process_messages(message, queue):
     return False
 
 
-
-
 def download_from_s3(bucket, key, Filename):    
     s3=s3_client()
     try:        
@@ -234,12 +231,10 @@ def connect_rabbitmq():
         ))
 
 
-
 # Consumer callback
 def callback(ch, method, properties, body):
     if process_messages(body, method.routing_key):
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        print(f"Acked: {method.routing_key}")
         logging.info(f"Acked: {method.routing_key}")
     else:
         error_msg=f"Failed processing. Not acked: {method.routing_key}."
@@ -279,6 +274,7 @@ def get_queues():
        logging.error(error_msg)
        send_to_zabbix(error_msg)
        return []
+
 
 # Monitor worker threads
 def monitor_threads():

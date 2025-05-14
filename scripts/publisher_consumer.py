@@ -93,7 +93,6 @@ def create_topic(repo):
         attributes = {'push-endpoint' : f'amqps://{RMQ_RGW_USER}:{RMQ_RGW_PASSWORD}@{RMQ_HOST}:{RMQ_PORT}' , 'amqp-exchange': RMQ_EXCHANGE, 'amqp-ack-level': 'broker', 'verify-ssl':'false' , 'use-ssl' : 'true' , 'persistent' : 'true'}
         resp = sns_client.create_topic(Name= repo, Attributes=attributes)
         topic_arn = resp["TopicArn"]
-        print(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
         logging.info(f'Topic created for repo {repo}, topic_arn = {topic_arn}')
     except Exception as ex:
         error_msg=f'An unexpected error occurred: {ex}'
@@ -113,7 +112,6 @@ def delete_topic(s,repo):
         )
         arn = f'arn:aws:sns:bbrgwzg::{repo}'
         resp = sns_client.delete_topic(TopicArn=arn)    
-        print(f'Topic deleted for repo {repo}')
         logging.info(f'Topic deleted for repo {repo}')
     except Exception as ex:
         error_msg=f'An unexpected error occurred: {ex}'
@@ -127,7 +125,6 @@ def create_queue(channel, repo):
     try:
         channel.queue_declare(queue=repo, durable=True, arguments={"x-queue-type": "quorum"}, exclusive=False)
         channel.queue_bind(exchange = RMQ_EXCHANGE, queue = repo, routing_key= repo)
-        print(f'Queue {repo} created for repo {repo}.infn.it')
         logging.info(f'Queue {repo} created for repo {repo}.infn.it')
         return True
     except pika.exceptions.ConnectionClosed as ex:
@@ -152,7 +149,6 @@ def create_queue(channel, repo):
 def vault_login_approle(client):
     try:
         login_response = client.auth.approle.login(role_id=V_ROLEID,secret_id=V_SECRETID)
-        print("Login to Vault server successful.")
         logging.info("Login to Vault server successful.")
     except hvac.exceptions.InvalidRequest as e:
         error_msg=f'Invalid request error: {e}'
@@ -180,11 +176,8 @@ def get_repo_keys(msg):
     try:
         client = hvac.Client(V_URL)
         vault_login_approle(client)
-        print("VAULT client authenticated:",client.is_authenticated())
         logging.info(f"VAULT client authenticated: {client.is_authenticated()}.")
-        print('Vault initialize status: %s' % client.sys.is_initialized())
         logging.info(f"Vault initialize status: {client.sys.is_initialized()}. ")
-        print("Vault is sealed:", client.sys.is_sealed())
         logging.info(f"Vault is sealed: {client.sys.is_sealed()}.")
         if type_repo == 'P':    
             PATH = "secrets/data/"+subject+"/cvmfs_keys/"+repository_name+"/"
@@ -240,8 +233,7 @@ def create_repo_publisher(repo_name):
 
 # Function called whenever a message from publisher queue is received
 def callback(ch, method, properties, body):    
-    message=body.decode("utf-8")
-    print(f' [*] {message} ')               #delcorso,34158350-c746-4918-82ab-9004dd03f95b,repo32.infn.it,G
+    message=body.decode("utf-8")              
     repo_name = get_repo_keys(message)
     if repo_name is not False:
         res = create_repo_publisher(repo_name)
@@ -278,7 +270,6 @@ def main():
                                                                                context, server_hostname=RMQ_HOSTNAME)
                                                                            )
                                                                            )
-            print('Connected to RabbitMQ, starting consuming publisher queue...')
             logging.info('Connected to RabbitMQ, starting consuming publisher queue...')
             channel = connection.channel()
             channel.queue_declare(queue=RMQ_PUBLISHER_QUEUE, durable=True, arguments={"x-queue-type": "quorum"})
@@ -291,7 +282,6 @@ def main():
             
 
             # Enter a never-ending loop that waits for data and runs callbacks whenever necessary
-            print(' [*] Waiting for messages. To exit press CTRL+C')
             logging.info(' [*] Waiting for messages. To exit press CTRL+C')
             channel.start_consuming()
 

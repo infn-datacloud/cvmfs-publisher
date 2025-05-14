@@ -78,7 +78,6 @@ def setup_logging():
     )
 
 
-
 def create_topic(repo):
     repo = repo.split('.')[0]
     try:
@@ -144,7 +143,6 @@ def create_queue(channel, repo):
         return False
 
 
-
 # VAUL AppRole login method
 def vault_login_approle(client):
     try:
@@ -201,7 +199,6 @@ def get_repo_keys(msg):
 
 # Make a CVMFS repository writable from publisher via gateway
 def create_repo_publisher(repo_name):
-    
     cmd = f'sudo cvmfs_server mkfs -w {CVMFS_SERVER_URL}{repo_name} \
     -u gw,/srv/cvmfs/{repo_name}/data/txn,{CVMFS_UP_STORAGE} \
     -k /tmp/{repo_name}_keys -o `whoami` {repo_name}'
@@ -272,7 +269,6 @@ def main():
                                   auto_ack=False,
                                   on_message_callback=callback)
             
-
             # Enter a never-ending loop that waits for data and runs callbacks whenever necessary
             logging.info(' [*] Waiting for messages. To exit press CTRL+C')
             channel.start_consuming()

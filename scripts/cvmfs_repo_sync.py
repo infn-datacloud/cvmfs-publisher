@@ -27,14 +27,14 @@ from logging.handlers import TimedRotatingFileHandler
 
 my_cvmfs_path = r"/data/cvmfs"                         # Folder path to monitor
 cvmfs_path    = r"/cvmfs/"                             # CVMFS repo base path
-TIME_CHECK    = 60                                          # Wait 60 seconds before check again
+TIME_CHECK    = 60                                     # Wait 60 seconds before check again
 
 
 with open("parameters.json") as json_data_file:
     data = json.load(json_data_file)
 
-ZBX_SERVER                  = data["zabbix"]['server']
-ZBX_ITEM_KEY                = data["zabbix"]['item_key2']
+ZBX_SERVER    = data["zabbix"]['server']
+ZBX_ITEM_KEY  = data["zabbix"]['item_key2']
 
 
 # Alerts sent to Zabbix server
@@ -103,8 +103,8 @@ def cvmfs_transaction(cvmfs_repo):
 
 
 
-def cvmfs_repo_sync():                                  # my_cvmfs_path=/data/cvmfs , cvmfs_path=/cvmfs
-    for cvmfs_repo in os.listdir(my_cvmfs_path):        # cvmfs_repo=repo01.infn.it    
+def cvmfs_repo_sync():                                  
+    for cvmfs_repo in os.listdir(my_cvmfs_path):           
         folder_path  = os.path.join(my_cvmfs_path, cvmfs_repo)
         cvmfs_folder = os.path.join(cvmfs_path, cvmfs_repo)
         
@@ -177,7 +177,7 @@ def cvmfs_repo_sync():                                  # my_cvmfs_path=/data/cv
 
             # CASE DELETE files
             files_to_delete = my_cvmfs_path + "/" + cvmfs_repo + "/to_delete/"  + cvmfs_repo.split('.')[0] + "-infn-it.txt"
-            if os.path.exists(files_to_delete) and (os.path.getsize(files_to_delete) > 0):  # check file existance and not empty
+            if os.path.exists(files_to_delete) and (os.path.getsize(files_to_delete) > 0):  
                 logging.info(f"Starting removing files for {cvmfs_repo} CVMFS repository ..")
                 delete_cvmfs_files(files_to_delete,cvmfs_repo)
 
@@ -234,7 +234,6 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                    send_to_zabbix(error_msg)
                    remaining_files.append(file)  # Keep the line if deletion fails
         
-
             # Execute CVMFS publish
             res=subprocess.run(["cvmfs_server", "publish", cvmfs_repo], capture_output=True,text=True,check=True)
             logging.info(f"{res.stdout}")
@@ -244,7 +243,6 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                 send_to_zabbix(error_msg)
             else:
                 logging.info(f"CVMFS publish for {cvmfs_repo} successfully completed.")
-
 
             # Rewrite the file with remaining paths
             with open(to_delete_file, "w") as f:
@@ -272,10 +270,8 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
                     send_to_zabbix(error_msg)
 
 
-
-
 # EXTRACT FUNTION
-def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_files=['oidc.tar']
+def cvmfs_extract(cvmfs_repo, tar_files): 
          
          my_cvmfs_repo_extract_path= my_cvmfs_path + "/" + cvmfs_repo + "/to_extract/"
          for tar_file in tar_files:
@@ -293,7 +289,7 @@ def cvmfs_extract(cvmfs_repo, tar_files):   # cvmfs_repo= repo01.infn.it , tar_f
                           logging.error(f"{res.stderr}")
                     
                     # CVMFS ingest
-                    my_tar_file= my_cvmfs_repo_extract_path + tar_file          # my_tar_file= cvmfs/repo21.infn.it/to_extract/oidc-agent.5.1.0.tar
+                    my_tar_file= my_cvmfs_repo_extract_path + tar_file       
                     subprocess.run(["cvmfs_server", "ingest", "-t", my_tar_file, "-b", "software/" , cvmfs_repo], capture_output=True, text=True, check=True)
                     
                     # Delete .tar files

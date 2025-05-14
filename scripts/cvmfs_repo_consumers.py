@@ -211,13 +211,11 @@ def download_from_s3(bucket, key, Filename):
         logging.info(error_msg)
         send_to_zabbix(error_msg)
         return False
-
     except Exception as e:
         error_msg=f'An unexpected error occurred: {e}'
         logging.info(error_msg)
         send_to_zabbix(error_msg)
         return False
-
 
 
 # RabbitMQ connection setup
@@ -256,7 +254,6 @@ def worker(queue_name):
         ch.basic_qos(prefetch_count=PREFETCH_COUNT)
         ch.queue_declare(queue=queue_name, durable=True, arguments={'x-queue-type':'quorum'})
         ch.basic_consume(queue=queue_name, on_message_callback=callback)
-        print(f"[✓] Listening on {queue_name}")
         logging.info(f"[✓] Listening on: {queue_name}")
         ch.start_consuming()
     except Exception as e:
@@ -270,12 +267,10 @@ def get_queues():
     try:
         url = f'{RMQ_URL}/api/queues'
         requests.packages.urllib3.disable_warnings()
-        resp = requests.get(url, auth=(RMQ_USER, RMQ_PASSWORD), verify=False)
-        
+        resp = requests.get(url, auth=(RMQ_USER, RMQ_PASSWORD), verify=False)      
         if resp.status_code == 200:
             return [q['name'] for q in resp.json() if q['name'] not in RMQ_EXCLUDED_QUEUES and 'amq.gen' not in  q['name']]
         else:
-            print(f"Failed to fetch queues. Status code: {resp.status_code}")
             logging.info(f"Failed to fetch queues. Status code: {resp.status_code}")
             return []
 
@@ -285,20 +280,17 @@ def get_queues():
        send_to_zabbix(error_msg)
        return []
 
-
 # Monitor worker threads
 def monitor_threads():
     while True:
         logging.info("Verify active queues ...")
         for queue in get_queues():
             if queue not in RUNNING_THREADS or not RUNNING_THREADS[queue].is_alive():
-                print(f"Starting thread for queue: {queue}")
                 logging.info(f"Starting thread for queue: {queue}")
                 thread = threading.Thread(target=worker, args=(queue,), daemon=True)
                 RUNNING_THREADS[queue] = thread
                 thread.start()
         time.sleep(CHECK_INTERVAL)
-
 
 def main():    
     setup_logging()        

@@ -1,0 +1,59 @@
+services:
+  cvmfs-repo-consumers:                                                                                 
+    build:
+      context: ./cvmfs-repo-consumers
+      dockerfile: Dockerfile
+    image: cvmfs-repo-consumers:latest
+    container_name: cvmfs-repo-consumers
+    hostname: cvmfs-repo-consumers
+    restart: unless-stopped
+    network_mode: cvmfs-publisher-docker-network
+    volumes:
+      - /data/cvmfs:/data/cvmfs
+      - /var/log/publisher:/var/log/publisher
+  cvmfs-repo-sync:
+    build:
+      context: ./cvmfs-repo-sync
+      dockerfile: Dockerfile
+    image: cvmfs-repo-sync:latest
+    container_name: cvmfs-repo-sync
+    hostname: cvmfs-repo-sync
+    privileged: true
+    user: root
+    restart: unless-stopped
+    network_mode: cvmfs-publisher-docker-network
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    volumes:
+      - /data/cvmfs:/data/cvmfs
+      - /var/spool/cvmfs:/var/spool/cvmfs
+      - /var/log/publisher:/var/log/publisher
+    stdin_open: true
+    tty: true
+  publisher-consumer: 
+    build:
+      context: ./publisher-consumer   
+      dockerfile: Dockerfile
+    image: publisher-consumer:latest        
+    container_name: publisher-consumer
+    hostname: publisher-consumer
+    privileged: true
+    user: root
+    restart: unless-stopped
+    network_mode: cvmfs-publisher-docker-network
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    volumes:
+      - /var/log/publisher:/var/log/publisher
+      - /var/spool/cvmfs:/var/spool/cvmfs
+    stdin_open: true
+    tty: true
+

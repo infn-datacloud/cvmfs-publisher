@@ -13,14 +13,15 @@ services:
       - /var/log/publisher:/var/log/publisher
   cvmfs-repo-sync:
     build:
-      context: ./cvmfs-repo-sync
+      context: ./sync-publisher
       dockerfile: Dockerfile
-    image: cvmfs-repo-sync:latest
+    image: sync-publisher:latest
     container_name: cvmfs-repo-sync
     hostname: cvmfs-repo-sync
     privileged: true
     user: root
     restart: unless-stopped
+    command: python /app/cvmfs_repo_sync.py 
     network_mode: cvmfs-publisher-docker-network
     devices:
       - /dev/fuse
@@ -36,14 +37,15 @@ services:
     tty: true
   publisher-consumer: 
     build:
-      context: ./publisher-consumer   
+      context: ./sync-publisher   
       dockerfile: Dockerfile
-    image: publisher-consumer:latest        
+    image: sync-publisher:latest        
     container_name: publisher-consumer
     hostname: publisher-consumer
     privileged: true
     user: root
     restart: unless-stopped
+    command: python /app/publisher_consumer.py
     network_mode: cvmfs-publisher-docker-network
     devices:
       - /dev/fuse

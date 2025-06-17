@@ -1,3 +1,0 @@
-pika
-boto3
-requests

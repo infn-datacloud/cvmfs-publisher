@@ -3,6 +3,8 @@
 $ sudo COMPOSE_BAKE=true docker-compose up --build -d
 
 
+# docker-compose explanation
+
 # cvmfs-publisher-docker-network docker network
 
 docker network create cvmfs-publisher-docker-network

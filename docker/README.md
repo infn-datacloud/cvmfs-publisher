@@ -1,5 +1,10 @@
 # Docker 
 ## docker-compose.yaml
+
+All the 3 dockers export their logs in /var/log/publisher.
+
+cvmfs-repo-consumers and cvmfs-repo-synk dockers share an external disk, /data/cvmfs
+
 ### cvmfs-publisher-docker-network
 
 The docker-compose.yaml uses a special docker network with MTU=1450 due to a INFN Cloud network constain.

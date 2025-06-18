@@ -2,7 +2,7 @@
 ## docker-compose.yaml
 ### cvmfs-publisher-docker-network
 
-The docker-compose.yaml uses a special docker network with MTU = 1450 due to a INFN Cloud network constain.
+The docker-compose.yaml uses a special docker network with MTU=1450 due to a INFN Cloud network constain.
 
 1. Save the docker binary:
 ```bash

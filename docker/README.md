@@ -31,7 +31,7 @@ $ sudo mv /usr/bin/docker /usr/bin/docker.bin
 $ sudo chmod +x /usr/bin/docker
 ```
 
-- Create the new network:ì
+- Create the new network:
 ```bash
 $ sudo docker network create cvmfs-publisher-docker-network
 ```
@@ -42,7 +42,10 @@ $ sudo docker network inspect cvmfs-publisher-docker-network
 ```
 
 - Create the docker using this network:
+```bash
 sudo docker run -d --name cvmfs-repo-consumers --network cvmfs-publisher-docker-network -v /var/log/publisher:/var/log/publisher -v /data/cvmfs:/data/cvmfs cvmfs-repo-consumers
+```
+
 
 
 ## docker-compose instructions

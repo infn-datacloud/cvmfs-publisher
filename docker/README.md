@@ -7,6 +7,7 @@ Steps:
 $ sudo mv /usr/bin/docker /usr/bin/docker.bin
 
 2. Create a docker wrapper script to set MTU to 1450. It is used only when the 'docker network create' command is executed:
+
 $ sudo vi /usr/bin/docker
 
 #!/usr/bin/env bash

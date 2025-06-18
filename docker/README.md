@@ -7,7 +7,7 @@ Steps:
 
     $ sudo mv /usr/bin/docker /usr/bin/docker.bin
 
-2. Create a docker wrapper script to set MTU to 1450. It is used only when the 'docker network create' command is executed:
+2. Create a docker wrapper script to set MTU to 1450, used only when the 'docker network create' command is executed:
 
     $ sudo vi /usr/bin/docker
 
@@ -18,17 +18,18 @@ Steps:
     DOCKER_BIN="/usr/bin/docker.bin"
 
     # Intercept the 'docker network create' command to inject custom MTU
+    
     if [[ "$1" == "network" && "$2" == "create" ]]; then
 
         shift 2
 
-    "$DOCKER_BIN" network create --opt com.docker.network.driver.mtu="$MTU" "$@"
+        "$DOCKER_BIN" network create --opt com.docker.network.driver.mtu="$MTU" "$@"
 
     else
 
         # Forward all other commands as-is
         "$DOCKER_BIN" "$@"
-        
+
     fi
 
 

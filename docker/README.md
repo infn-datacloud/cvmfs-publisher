@@ -1,4 +1,4 @@
-# docker-compose.yaml explanation
+# docker-compose.yaml
 
 The docker-compose.yaml uses a special docker network with MTU = 1450 due to a INFN Cloud network constain.
 
@@ -21,6 +21,7 @@ else
     # Forward all other commands as-is
     "$DOCKER_BIN" "$@"
 fi
+
 
 3. Give execute permissions on the new wrapper:
 $ sudo chmod +x /usr/bin/docker

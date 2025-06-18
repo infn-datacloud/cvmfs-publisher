@@ -1,6 +1,6 @@
 # Docker solution
 
-cvmfs/repo/consumers, cvmfs/repo/sync and publisher/consumer are independent dockers where the corresponding scripts are running. 
+cvmfs-repo-consumers, cvmfs-repo-sync and publisher-consumer are independent dockers where the corresponding scripts are running. 
 
 ## docker-compose.yaml
 

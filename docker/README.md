@@ -5,7 +5,7 @@ All the 3 dockers export their logs in /var/log/publisher.
 
 cvmfs-repo-consumers and cvmfs-repo-sync dockers share an external disk, /data/cvmfs
 
-publisher-consumer and cvmfs-repo-sync dockers MUST import an ext4 volume for the /var/spool/cvmfs partition. It can be any ext4 volume other than /var/spool/cvmfs, for example /tmp.
+publisher-consumer and cvmfs-repo-sync dockers MUST use an ext4 volume for the /var/spool/cvmfs partition. This volume can be any ext4 volume; for example, it could be /tmp. This is because OverlayFS on OverlayFS is not supported in Linux. OverlayFS is a union filesystem used by the CVMFS server installed as a Docker. When a transaction is done, CVMFS server attempts to mount another OverlayFS, which results in the following error: overlayfs: filesystem on '/var/spool/cvmfs/xxxx/scratch/current' not supported as upperdir. The solution is to mount a host-compatible volume like ext4.
 
 
 ### cvmfs-publisher-docker-network

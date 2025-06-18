@@ -1,4 +1,4 @@
-# docker-compose.yaml
+### docker-compose.yaml
 
 The docker-compose.yaml uses a special docker network with MTU = 1450 due to a INFN Cloud network constain.
 
@@ -17,7 +17,6 @@ Steps:
         shift 2
         "$DOCKER_BIN" network create --opt com.docker.network.driver.mtu="$MTU" "$@"
     else
-        # Forward all other commands as-is
         "$DOCKER_BIN" "$@"
     fi
 ```

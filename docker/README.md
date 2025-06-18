@@ -5,7 +5,7 @@ All the 3 dockers export their logs in /var/log/publisher.
 
 cvmfs-repo-consumers and cvmfs-repo-sync dockers share an external disk, /data/cvmfs
 
-volumes /var/spool/cvmfs:/var/spool/cvmfs : publisher-consumer and cvmfs-repo-sync dockers MUST import an ext4 file system to mount the /var/spool/cvmfs partition. 
+publisher-consumer and cvmfs-repo-sync dockers MUST import an ext4 volume for the /var/spool/cvmfs partition. It can be any ext4 volume other than /var/spool/cvmfs, for example /tmp.
 
 
 ### cvmfs-publisher-docker-network

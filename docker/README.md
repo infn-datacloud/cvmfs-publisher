@@ -16,8 +16,6 @@ Steps:
     MTU=1450
 
     DOCKER_BIN="/usr/bin/docker.bin"
-
-    # Intercept the 'docker network create' command to inject custom MTU
     
     if [[ "$1" == "network" && "$2" == "create" ]]; then
 

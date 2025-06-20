@@ -34,8 +34,6 @@ services:
       - /data/cvmfs:/data/cvmfs
       - /var/spool/cvmfs:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
-    stdin_open: true
-    tty: true
   publisher-consumer: 
     build:
       context: ./   
@@ -57,6 +55,3 @@ services:
     volumes:
       - /var/log/publisher:/var/log/publisher
       - /var/spool/cvmfs:/var/spool/cvmfs
-    stdin_open: true
-    tty: true
-

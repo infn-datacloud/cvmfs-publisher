@@ -1,6 +1,6 @@
 # Docker solution
 
-cvmfs-repo-consumers, cvmfs-repo-sync and publisher-consumer are independent dockers running the corresponding python script. They are executed by the docker-compose command.
+cvmfs-repo-consumers, cvmfs-repo-sync and publisher-consumer are independent dockers running the corresponding python scripts. They are executed by the docker-compose command.
 
 ## docker-compose.yaml
 

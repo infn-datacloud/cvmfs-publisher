@@ -21,7 +21,9 @@ COPY ./src/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code
-COPY ./src /app/
+COPY ./src/certs /app/certs/
+COPY ./src/cvmfs_repo_consumers.py /app/
+COPY ./src/parameters.json /app/
 
 
 ##########################
@@ -37,17 +39,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends zabbix-sender && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-
 # Copy virtual environment and application
 COPY --from=builder /venv /venv
 COPY --from=builder /app /app
 
-# Add entrypoint script
-COPY ./src/entrypoint.sh /usr/bin/entrypoint.sh
-RUN chmod +x /usr/bin/entrypoint.sh
-
 # Activate virtualenv
 ENV PATH="/venv/bin:$PATH"
 
-ENTRYPOINT ["/usr/bin/entrypoint.sh"]
 

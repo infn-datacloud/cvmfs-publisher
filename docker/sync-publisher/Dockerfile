@@ -21,7 +21,10 @@ COPY ./src/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code
-COPY ./src /app/
+COPY ./src/certs /app/certs/
+COPY ./src/cvmfs_repo_sync.py /app/
+COPY ./src/publisher_consumer.py /app/
+COPY ./src/parameters.json /app/
 
 
 ##########################

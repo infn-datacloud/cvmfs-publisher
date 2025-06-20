@@ -1,20 +1,21 @@
 services:
   cvmfs-repo-consumers:                                                                                 
     build:
-      context: ./cvmfs-repo-consumers
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: ./cvmfs-repo-consumers/Dockerfile
     image: cvmfs-repo-consumers:latest
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
     restart: unless-stopped
+    command: python /app/cvmfs_repo_consumers.py
     network_mode: cvmfs-publisher-docker-network
     volumes:
       - /data/cvmfs:/data/cvmfs
       - /var/log/publisher:/var/log/publisher
   cvmfs-repo-sync:
     build:
-      context: ./sync-publisher
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: ./sync-publisher/Dockerfile
     image: sync-publisher:latest
     container_name: cvmfs-repo-sync
     hostname: cvmfs-repo-sync
@@ -37,8 +38,8 @@ services:
     tty: true
   publisher-consumer: 
     build:
-      context: ./sync-publisher   
-      dockerfile: Dockerfile
+      context: ./   
+      dockerfile: ./sync-publisher/Dockerfile
     image: sync-publisher:latest        
     container_name: publisher-consumer
     hostname: publisher-consumer

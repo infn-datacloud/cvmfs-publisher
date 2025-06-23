@@ -1,9 +1,7 @@
 ARG PYTHON_VERSION=3.11
 ARG POETRY_VERSION=1.8.3
 
-##########################
-# Stage 1 – Builder
-##########################
+
 FROM ghcr.io/withlogicco/poetry:${POETRY_VERSION}-python-${PYTHON_VERSION}-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -26,9 +24,7 @@ COPY ./src/parameters.json ./
 COPY ./src/entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
-##########################
-# Stage 2 – Production
-##########################
+
 FROM python:${PYTHON_VERSION}-slim AS production
 
 ENV DEBIAN_FRONTEND=noninteractive

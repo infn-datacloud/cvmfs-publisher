@@ -1,9 +1,6 @@
 ARG PYTHON_VERSION=3.11
 ARG POETRY_VERSION=1.8.3
 
-######################
-# Stage 1 – Builder
-######################
 FROM ghcr.io/withlogicco/poetry:${POETRY_VERSION}-python-${PYTHON_VERSION}-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,9 +20,7 @@ COPY ./src/certs ./certs/
 COPY ./src/cvmfs_repo_consumers.py ./
 COPY ./src/parameters.json ./
 
-##########################
-# Stage 2 – Production
-##########################
+
 FROM python:${PYTHON_VERSION}-slim AS production
 
 ENV DEBIAN_FRONTEND=noninteractive

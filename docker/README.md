@@ -3,7 +3,7 @@
 cvmfs-repo-consumers, cvmfs-repo-sync and publisher-consumer are independent dockers running the corresponding python scripts. 
 
 
-## Docker images build
+## Build docker images
 
 $ sudo docker build -f cvmfs-repo-consumers/Dockerfile -t cvmfs-repo-consumers .
 

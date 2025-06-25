@@ -4,17 +4,17 @@ cvmfs-repo-consumers, cvmfs-repo-sync and publisher-consumer are independent doc
 
 
 ## Build docker images
-
+```bash
 $ sudo docker build -f cvmfs-repo-consumers/Dockerfile -t cvmfs-repo-consumers .
 
 $ sudo docker build -f sync-publisher/Dockerfile -t sync-publisher .
-
+```
 
 
 ## Instructions docker compose 
-
+```bash
 $ sudo COMPOSE_BAKE=true docker-compose up -d
-
+```
 
 ### Docker notes
 

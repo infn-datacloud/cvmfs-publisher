@@ -63,7 +63,6 @@ def setup_logging():
     )
 
 
-
 def create_topic(repo):
     repo = repo.split('.')[0]
     try:
@@ -127,7 +126,6 @@ def create_queue(channel, repo):
         logging.error(error_msg)
         send_to_zabbix(error_msg)
         return False
-
 
 
 # VAUL AppRole login method

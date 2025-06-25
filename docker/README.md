@@ -26,7 +26,7 @@ $ sudo COMPOSE_BAKE=true docker-compose up -d
 ```
 
 
-### cvmfs-publisher-docker-network
+## cvmfs-publisher-docker-network
 
 The docker-compose.yaml uses a special docker network with MTU=1450 due to a INFN Cloud network constain.
 

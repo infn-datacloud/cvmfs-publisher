@@ -1,9 +1,7 @@
 ARG PYTHON_VERSION=3.11
 ARG POETRY_VERSION=1.8.3
 
-######################
-# Stage 1 – Builder
-######################
+
 FROM ghcr.io/withlogicco/poetry:${POETRY_VERSION}-python-${PYTHON_VERSION}-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -19,9 +17,7 @@ RUN pip install --upgrade pip virtualenv --no-cache-dir && \
     /venv/bin/pip install --no-cache-dir -r requirements.txt
 
 
-##########################
-# Stage 2 – Production
-##########################
+
 FROM python:${PYTHON_VERSION}-slim AS production
 
 ENV DEBIAN_FRONTEND=noninteractive

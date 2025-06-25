@@ -17,7 +17,6 @@ from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 import requests
 import hvac
-#from pathlib import Path
 
 
 with open("parameters.json") as json_data_file:

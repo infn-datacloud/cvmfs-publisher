@@ -1,8 +1,5 @@
 services:
   cvmfs-repo-consumers:                                                                                 
-    build:
-      context: ./
-      dockerfile: ./cvmfs-repo-consumers/Dockerfile
     image: cvmfs-repo-consumers:latest
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
@@ -10,12 +7,12 @@ services:
     command: python /app/cvmfs_repo_consumers.py
     network_mode: cvmfs-publisher-docker-network
     volumes:
+      - ./src/certs:/app/certs
+      - ./src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
       - /var/log/publisher:/var/log/publisher
+
   cvmfs-repo-sync:
-    build:
-      context: ./
-      dockerfile: ./sync-publisher/Dockerfile
     image: sync-publisher:latest
     container_name: cvmfs-repo-sync
     hostname: cvmfs-repo-sync
@@ -31,13 +28,13 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
+      - ./src/certs:/app/certs
+      - ./src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
       - /var/spool/cvmfs:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
+
   publisher-consumer: 
-    build:
-      context: ./   
-      dockerfile: ./sync-publisher/Dockerfile
     image: sync-publisher:latest        
     container_name: publisher-consumer
     hostname: publisher-consumer
@@ -53,5 +50,8 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
+      - ./src/certs:/app/certs
+      - ./src/parameters.json:/app/parameters.json
       - /var/log/publisher:/var/log/publisher
       - /var/spool/cvmfs:/var/spool/cvmfs
+

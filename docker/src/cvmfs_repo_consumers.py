@@ -1,5 +1,3 @@
-# Author: FDC
-# @ 30 May 2025
 
 import os
 import sys

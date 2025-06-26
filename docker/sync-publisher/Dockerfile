@@ -45,7 +45,7 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
 
 COPY --from=builder /venv /venv
 
-COPY ./src/entrypoint.sh ./
+COPY ./src/publisher_consumer.py ./src/cvmfs_repo_sync.py ./src/entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 
 ENV PATH="/venv/bin:$PATH"

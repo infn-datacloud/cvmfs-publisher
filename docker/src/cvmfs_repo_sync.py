@@ -1,7 +1,3 @@
-# cvmfs_repo_sync.py
-# Author: Francesca Del Corso
-# Last update: April 29, 2025
-# Syncronization between /data/cvmfs/reponame folders and the corresponding CVMFS repositories
 
 import os
 import sys

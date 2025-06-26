@@ -4,10 +4,9 @@ services:
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
     restart: unless-stopped
-    command: python /app/cvmfs_repo_consumers.py
     network_mode: cvmfs-publisher-docker-network
     volumes:
-      - ./src/certs:/app/certs
+      - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
       - /var/log/publisher:/var/log/publisher
@@ -28,8 +27,9 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
-      - ./src/certs:/app/certs
+      - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
+      - ./src/cvmfs_repo_sync.py:/app/cvmfs_repo_sync.py
       - /data/cvmfs:/data/cvmfs
       - /var/spool/cvmfs:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
@@ -50,8 +50,9 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
-      - ./src/certs:/app/certs
+      - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
+      - ./src/publisher_consumer.py:/app/publisher_consumer.py
       - /var/log/publisher:/var/log/publisher
       - /var/spool/cvmfs:/var/spool/cvmfs
 

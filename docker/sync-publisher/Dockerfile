@@ -16,10 +16,12 @@ RUN pip install --upgrade pip virtualenv --no-cache-dir && \
     /venv/bin/pip install --no-cache-dir -r requirements.txt
 
 
+
 FROM python:${PYTHON_VERSION}-slim AS production
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
+
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -37,13 +39,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -f cvmfs-release-latest_all.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
     echo "CVMFS_HTTP_PROXY=DIRECT" > /etc/cvmfs/default.local
 
 COPY --from=builder /venv /venv
-COPY --from=builder /app /app
 
-COPY ./src/cvmfs_repo_sync.py ./src/publisher_consumer.py ./src/entrypoint.sh ./
+COPY ./src/entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 
 ENV PATH="/venv/bin:$PATH"

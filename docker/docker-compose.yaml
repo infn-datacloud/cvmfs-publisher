@@ -4,7 +4,6 @@ services:
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
     restart: unless-stopped
-    network_mode: cvmfs-publisher-docker-network
     volumes:
       - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
@@ -19,7 +18,6 @@ services:
     user: root
     restart: unless-stopped
     command: python /app/cvmfs_repo_sync.py 
-    network_mode: cvmfs-publisher-docker-network
     devices:
       - /dev/fuse
     cap_add:
@@ -41,7 +39,6 @@ services:
     user: root
     restart: unless-stopped
     command: python /app/publisher_consumer.py
-    network_mode: cvmfs-publisher-docker-network
     devices:
       - /dev/fuse
     cap_add:

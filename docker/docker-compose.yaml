@@ -28,7 +28,7 @@ services:
       - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
-      - /var/spool/cvmfs:/var/spool/cvmfs
+      - /mnt/cvmfs_spool_sync:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
 
   publisher-consumer: 
@@ -48,6 +48,6 @@ services:
     volumes:
       - ./certs:/app/certs
       - ./src/parameters.json:/app/parameters.json
+      - /mnt/cvmfs_spool_publisher:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
-      - /var/spool/cvmfs:/var/spool/cvmfs
 

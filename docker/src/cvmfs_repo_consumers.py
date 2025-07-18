@@ -1,3 +1,5 @@
+# Author: FDC
+# @ 30 May 2025
 
 import os
 import sys
@@ -317,22 +319,42 @@ def worker(queue_name):
 
 # Getting RabbitMQ queues
 def get_queues():
+    url = f'{RMQ_URL}/api/queues'
     try:
-        url = f'{RMQ_URL}/api/queues'
         requests.packages.urllib3.disable_warnings()
-        resp = requests.get(url, auth=(RMQ_USER, RMQ_PASSWORD), verify=False)
+        resp = requests.get(url, auth=(RMQ_USER, RMQ_PASSWORD), verify=False,timeout=(5, 10))
         
         if resp.status_code == 200:
             return [q['name'] for q in resp.json() if q['name'] not in RMQ_EXCLUDED_QUEUES and 'amq.gen' not in  q['name']]
         else:
-            logging.info(f"Failed to fetch queues. Status code: {resp.status_code}")
+            logging.info(f"Failed to fetch queues. {resp.status_code} - {resp.text}")
             return []
 
+    except requests.exceptions.ConnectTimeout:
+        error_msg = "Connection timed out while connecting to RabbitMQ API"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        return []
+    except requests.exceptions.ReadTimeout:
+        error_msg = "Read timed out while waiting for response from RabbitMQ API"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        return []
+    except requests.exceptions.ConnectionError as e:
+        error_msg = f"Network connection error to RabbitMQ API: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        return []
+    except requests.exceptions.RequestException as e:
+        error_msg=f"Unexpected request error when connecting to RabbitMQ API: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        return []
     except Exception as e:
-       error_msg=f"Error while connecting to RabbitMQ API: {e}"
-       logging.error(error_msg)
-       send_to_zabbix(error_msg)
-       return []
+        error_msg=f"Unexpected error: {e}"
+        logging.error(error_msg)
+        send_to_zabbix(error_msg)
+        return []
 
 
 # Monitor worker threads

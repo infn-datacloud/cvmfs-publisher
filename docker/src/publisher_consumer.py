@@ -4,14 +4,13 @@ import pika.exceptions
 import hvac
 import ssl
 import json
-import argparse
 import subprocess
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 import shutil
 from datetime import datetime
-import os,sys
+import sys
 import socket
 
 
@@ -63,6 +62,7 @@ def setup_logging():
     )
 
 
+
 def create_topic(repo):
     repo = repo.split('.')[0]
     try:
@@ -95,7 +95,7 @@ def delete_topic(s,repo):
         region_name=RGW_REGION,
         )
         arn = f'arn:aws:sns:bbrgwzg::{repo}'
-        resp = sns_client.delete_topic(TopicArn=arn)    
+        sns_client.delete_topic(TopicArn=arn)    
         logging.info(f'Topic deleted for repo {repo}')
     except Exception as ex:
         error_msg=f'An unexpected error occurred: {ex}'
@@ -128,10 +128,11 @@ def create_queue(channel, repo):
         return False
 
 
+
 # VAUL AppRole login method
 def vault_login_approle(client):
     try:
-        login_response = client.auth.approle.login(role_id=V_ROLEID,secret_id=V_SECRETID)
+        client.auth.approle.login(role_id=V_ROLEID,secret_id=V_SECRETID)
         logging.info("Login to Vault server successful.")
     except hvac.exceptions.InvalidRequest as e:
         error_msg=f'Invalid request error: {e}'

@@ -1,3 +1,7 @@
+# cvmfs_repo_sync.py
+# Author: Francesca Del Corso
+# Last update: April 29, 2025
+# Syncronization between /data/cvmfs/reponame folders and the corresponding CVMFS repositories
 
 import os
 import sys
@@ -86,7 +90,7 @@ def cvmfs_transaction(cvmfs_repo):
             send_to_zabbix(error_msg)
 
 
-# Make a CVMFS repository writable from publisher via gateway
+# Create a CVMFS repository writable from publisher via gateway
 def create_repo_publisher(repo_name):
     cmd = f'cvmfs_server mkfs -w {CVMFS_SERVER_URL}{repo_name} \
     -u gw,/srv/cvmfs/{repo_name}/data/txn,{CVMFS_UP_STORAGE} \
@@ -94,9 +98,9 @@ def create_repo_publisher(repo_name):
     try:
        subprocess.run(cmd, shell=True, capture_output=True, check=True)
        logging.info(f'CVMFS repository {repo_name} successfully created.')
-       keys_dir=f'/data/cvmfs/{repo_name}/keys'
-       for file in os.listdir(keys_dir):
-         os.remove(os.path.join(keys_dir, file))
+       # Delete CVMFS repo keys from /data/cvmfs/{repo_name}/keys/
+       # CVMFS repo keys cannot be taken from Vault because the sync process down not know if the repo is personal or group, while the publisher has this information from the message received from
+       shutil.rmtree(f'/data/cvmfs/{repo_name}/keys/')
        return True
     except subprocess.CalledProcessError as e:
         error_msg=f'{e.stderr.decode()}'
@@ -149,7 +153,7 @@ def cvmfs_repo_sync():                                  # my_cvmfs_path=/data/cv
                         # Delete files from /data/cvmfs/repo only after publishing successfully finished
                         for file_name in files:
                             os.remove(os.path.join(folder_path, file_name))
-                            logging.info(f"Deleted: /data/cvmfs{cvmfs_folder}/{file_name}.")
+                            logging.info(f"Deleted: /data{cvmfs_folder}/{file_name}.")
                     logging.info(f"Syncronization process for {cvmfs_repo} CVMFS repository successfully completed.")
                 except subprocess.CalledProcessError as e:
                     error_msg=f"CVMFS transaction ERROR for {cvmfs_repo} repository: {e}, aborting transaction..."
@@ -191,6 +195,7 @@ def delete_cvmfs_files(to_delete_file,cvmfs_repo):
               files = f.readlines()           
          remaining_files = []              
          try:
+            create_repo_publisher(cvmfs_repo)
             # CVMFS transaction
             cvmfs_transaction(cvmfs_repo)
             for file in files:

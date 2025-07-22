@@ -7,8 +7,8 @@ pipeline {
     }
 
     environment {
-        PROJECT_NAME = 'sync-publisher'
-        DOCKERFILE = './sync-publisher/Dockerfile'
+        PROJECT_NAME = 'cvmfs-repo-consumers'
+        DOCKERFILE = './cvmfs-repo-consumers/Dockerfile'
 
         DOCKER_HUB_CREDENTIALS_NAME = 'docker-hub-credentials'
         DOCKER_HUB_CREDENTIALS = credentials("${DOCKER_HUB_CREDENTIALS_NAME}")

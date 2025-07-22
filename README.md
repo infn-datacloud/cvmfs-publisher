@@ -39,9 +39,9 @@ CVMFS publisher gets notified by RabbitMQ when the content of the cvmfs/ area of
 
 ## Build docker images
 ```bash
-$ sudo docker build -f cvmfs-repo-consumers/Dockerfile -t cvmfs-repo-consumers .
+$ sudo docker build -f docker/cvmfs-repo-consumers.dockerfile -t cvmfs-repo-consumers .
 
-$ sudo docker build -f sync-publisher/Dockerfile -t sync-publisher .
+$ sudo docker build -f docker/sync-publisher.dockerfile -t sync-publisher .
 ```
 
 

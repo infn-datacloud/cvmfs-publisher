@@ -1,9 +1,9 @@
 {
     "ceph-rgw": {
-        "access_key": "XXXXXX",
+        "access_key": "L9TICJ0KDNA9GN55WNXY",
         "region": "default",
         "role": "cvmfsAccess",
-        "secret_key": "XXXXXX",
+        "secret_key": "AOGF0MKTVyxVmAB5BABzzXCsO3oTtXpnTMSDBKFC",
         "url": "https://rgw.cloud.infn.it/"
     },
     "cvmfs": {
@@ -11,7 +11,7 @@
         "upstream_storage": "http://cvmfs.wp6.cloud.infn.it:4929/api/v1"
     },
     "rabbitmq": {
-        "admin_password": "XXXXXX",
+        "admin_password": "r@BBitt2024",
         "admin_user": "rabbitmq",
         "exchange": "notification",
         "excluded_queues": [
@@ -24,7 +24,7 @@
         "hostname": "rabbitmq",
         "port": 5671,
         "publisher_queue": "publisher",
-        "rgw_password": "XXXXXX",
+        "rgw_password": "Topic01",
         "rgw_user": "notification",
         "url": "https://192.135.24.151:15671/"
     },
@@ -35,7 +35,7 @@
     },
     "vault": {
         "role_id": "ec19dcdd-4c5b-b338-9774-4b65efab9f32",
-        "secret_id": "XXXXXX",
+        "secret_id": "0c17d159-25d8-dafd-fdd1-632086732d7e",
         "vault_url": "https://vault-dev.cloud.infn.it:8200"
     },
     "zabbix": {

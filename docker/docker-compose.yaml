@@ -1,17 +1,17 @@
 services:
   cvmfs-repo-consumers:                                                                                 
-    image: cvmfs-repo-consumers:latest
+    image: harbor.cloud.infn.it/datacloud-middleware/cvmfs-repo-consumers:PR-1
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
     restart: unless-stopped
     volumes:
-      - ./certs:/app/certs
-      - ./src/parameters.json:/app/parameters.json
+      - ../certs:/app/certs
+      - ../src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
       - /var/log/publisher:/var/log/publisher
 
   cvmfs-repo-sync:
-    image: sync-publisher:latest
+    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:PR-1
     container_name: cvmfs-repo-sync
     hostname: cvmfs-repo-sync
     privileged: true
@@ -25,14 +25,14 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
-      - ./certs:/app/certs
-      - ./src/parameters.json:/app/parameters.json
+      - ../certs:/app/certs
+      - ../src/parameters.json:/app/parameters.json
       - /data/cvmfs:/data/cvmfs
       - /mnt/cvmfs_spool_sync:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
 
   publisher-consumer: 
-    image: sync-publisher:latest        
+    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:PR-1       
     container_name: publisher-consumer
     hostname: publisher-consumer
     privileged: true
@@ -46,8 +46,8 @@ services:
     security_opt:
       - apparmor=unconfined
     volumes:
-      - ./certs:/app/certs
-      - ./src/parameters.json:/app/parameters.json
+      - ../certs:/app/certs
+      - ../src/parameters.json:/app/parameters.json
       - /mnt/cvmfs_spool_publisher:/var/spool/cvmfs
       - /var/log/publisher:/var/log/publisher
 

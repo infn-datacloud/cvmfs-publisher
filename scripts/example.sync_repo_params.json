@@ -1,0 +1,15 @@
+{
+    "ceph-rgw": {
+        "access_key": "cepg_rgw_access_key",
+        "region": "default_region",
+        "role": "ceph-rgw_role",
+        "secret_key": "ceph-rgw-secret-id",
+        "url": "ceph-rgw-web-url"
+    },
+    "sync": {
+        "working_dir": "work_dir",
+        "bucket": "bucket_name",
+        "exclude_dirs": [],
+        "exclude_files": []
+    }
+}

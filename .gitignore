@@ -1,6 +1,9 @@
 # Config file used by the 3 dockers container
 **/parameters.json
 
+# Config file used by cvmfs_repo_agent.py script
+**/cvmfs_repo_agent_params.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

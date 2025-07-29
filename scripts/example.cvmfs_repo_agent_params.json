@@ -1,0 +1,35 @@
+{
+    "cvmfs": {
+        "cronFile": "/var/spool/cron/cronFile",
+        "repo_creation_log": "/var/log/cvmfs_repo_agent/repo_creation.log",
+        "repo_key_path": "/etc/cvmfs/keys/",
+        "repo_path": "/cvmfs",
+        "S3_cfg": "/root/cvmfs_S3_cfg.cfg",
+        "S3_url": "https://rgw.cloud.infn.it:443/cvmfs/"
+    },
+    "cvmfs-gateway": {
+        "cvmfs_gw_bck_key_path": "/root/gw_bck_key/",
+        "cvmfs_gw_repo_json_file": "/etc/cvmfs/gateway/repository.json",
+        "gwKeySecretLenght": 25
+    },
+    "rabbitMQ": {
+        "cvmfs_queue": "cvmfs_queue",
+        "cvmfs_reply_queue": "cvmfs_reply_queue",
+        "host": "rabbitMQ_host_ipaddress",
+        "hostname": "rabbitMQ_hostname",
+        "password": "rabbitMQ_password",
+        "port": "rabbitMQ_port",
+        "publisher_queue": "publisher_queue",
+        "username": "rabbitMQ_username"
+    },
+    "ssl": {
+        "ca_cert": "/path/to/ca_cert",
+        "client_cert": "/path/to/client_cert",
+        "client_key": "/path/to/client_key"
+    },
+    "vault": {
+        "role-id": "vault_role_id",
+        "secret-id": "vault_secret_id",
+        "url": "vault_web_url"
+    }
+}

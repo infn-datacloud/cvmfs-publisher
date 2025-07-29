@@ -1,5 +1,11 @@
-# Config file used by the 3 dockers container
+# Config file used by the cvmfs-repo-consumers, publisher-consume, cvmfs-repo-sync dockers container
 **/parameters.json
+
+# Config file used by cvmfs_repo_agent.py script
+**/cvmfs_repo_agent_params.json
+
+# Config file uesed by sync_repo.py script
+**/sync_repo_params.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

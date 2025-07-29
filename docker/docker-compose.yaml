@@ -1,6 +1,6 @@
 services:
   cvmfs-repo-consumers:                                                                                 
-    image: harbor.cloud.infn.it/datacloud-middleware/cvmfs-repo-consumers:PR-1
+    image: harbor.cloud.infn.it/datacloud-middleware/cvmfs-repo-consumers:main
     container_name: cvmfs-repo-consumers
     hostname: cvmfs-repo-consumers
     restart: unless-stopped
@@ -11,7 +11,7 @@ services:
       - /var/log/publisher:/var/log/publisher
 
   cvmfs-repo-sync:
-    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:PR-1
+    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:main
     container_name: cvmfs-repo-sync
     hostname: cvmfs-repo-sync
     privileged: true
@@ -32,7 +32,7 @@ services:
       - /var/log/publisher:/var/log/publisher
 
   publisher-consumer: 
-    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:PR-1       
+    image: harbor.cloud.infn.it/datacloud-middleware/sync-publisher:main      
     container_name: publisher-consumer
     hostname: publisher-consumer
     privileged: true
